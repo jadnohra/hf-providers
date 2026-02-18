@@ -40,13 +40,6 @@ fn readiness_str(r: Readiness) -> String {
     }
 }
 
-fn bool_str(v: Option<bool>) -> String {
-    match v {
-        Some(true) => format!("{}", s_hot().apply_to("\u{2713}")),
-        _ => format!("{}", s_tree().apply_to("\u{2500}")),
-    }
-}
-
 fn fmt_count(n: u64) -> String {
     if n >= 1_000_000 {
         format!("{:.1}M", n as f64 / 1_000_000.0)
@@ -54,21 +47,6 @@ fn fmt_count(n: u64) -> String {
         format!("{:.1}k", n as f64 / 1_000.0)
     } else {
         n.to_string()
-    }
-}
-
-fn fmt_price(v: Option<f64>) -> String {
-    match v {
-        Some(p) => format!("{}", s_price().apply_to(format!("${:.2}", p))),
-        None => format!("{}", s_tree().apply_to("\u{2500}")),
-    }
-}
-
-fn fmt_tput(v: Option<f64>) -> String {
-    match v {
-        Some(t) if t >= 100.0 => format!("{}", s_warm().apply_to(format!("{:.0} t/s", t))),
-        Some(t) => format!("{}", s_dim().apply_to(format!("{:.0} t/s", t))),
-        None => format!("{}", s_tree().apply_to("\u{2500}")),
     }
 }
 
@@ -295,7 +273,7 @@ async fn cmd_search(client: &HfClient, query: &str, opts: &Cli) -> anyhow::Resul
     // Interactive picker (TTY only, not --json, not piped).
     let term = Term::stderr();
     if term.is_term() && !opts.json {
-        interactive_picker(client, model, variants).await?;
+        interactive_picker(client, &model, &variants).await?;
     }
 
     Ok(())
@@ -519,7 +497,7 @@ async fn cmd_status(
 
 // ── Display ──────────────────────────────────────────────────────────
 
-fn print_model_full(model: &Model, variants: &[Model], opts: &Cli) {
+fn print_model_full(model: &Model, _variants: &[Model], opts: &Cli) {
     let tag = model.pipeline_tag.as_deref().unwrap_or("unknown");
     let param = Model::param_hint(&model.id).unwrap_or_default();
     let inf = model.inference_status.as_deref().unwrap_or("unknown");
@@ -610,26 +588,42 @@ fn print_model_full(model: &Model, variants: &[Model], opts: &Cli) {
         println!("{}", sep(64));
 
         println!(
-            "  {:<16} {:<10} {:<9} {:<9} {:<9} {:<6} {}",
-            s_dim().apply_to("Provider"),
-            s_dim().apply_to("Status"),
-            s_dim().apply_to("In $/1M"),
-            s_dim().apply_to("Out $/1M"),
-            s_dim().apply_to("Tput"),
-            s_dim().apply_to("Tools"),
+            "  {} {} {} {} {} {} {}",
+            s_dim().apply_to(format!("{:<16}", "Provider")),
+            s_dim().apply_to(format!("{:<10}", "Status")),
+            s_dim().apply_to(format!("{:<9}", "In $/1M")),
+            s_dim().apply_to(format!("{:<9}", "Out $/1M")),
+            s_dim().apply_to(format!("{:<9}", "Tput")),
+            s_dim().apply_to(format!("{:<6}", "Tools")),
             s_dim().apply_to("JSON"),
         );
 
         for p in &providers {
+            // Pad plain strings first, then colorize to avoid ANSI length issues.
+            let name_col = format!("{:<16}", p.name);
+            let status_col = format!("{:<10}", p.readiness());
+            let in_col = format!("{:<9}", p.input_price_per_m.map(|v| format!("${:.2}", v)).unwrap_or_else(|| "\u{2500}".into()));
+            let out_col = format!("{:<9}", p.output_price_per_m.map(|v| format!("${:.2}", v)).unwrap_or_else(|| "\u{2500}".into()));
+            let tput_col = format!("{:<9}", p.throughput_tps.map(|v| format!("{:.0} t/s", v)).unwrap_or_else(|| "\u{2500}".into()));
+            let tools_col = format!("{:<6}", if p.supports_tools == Some(true) { "\u{2713}" } else { "\u{2500}" });
+            let json_col = if p.supports_structured == Some(true) { "\u{2713}" } else { "\u{2500}" };
+
+            let status_style = match p.readiness() {
+                Readiness::Hot => s_hot(),
+                Readiness::Warm => s_warm(),
+                Readiness::Cold => s_cold(),
+                Readiness::Unavailable => s_err(),
+            };
+
             println!(
-                "  {:<16} {:<10} {:<9} {:<9} {:<9} {:<6} {}",
-                s_accent().apply_to(&p.name),
-                readiness_str(p.readiness()),
-                fmt_price(p.input_price_per_m),
-                fmt_price(p.output_price_per_m),
-                fmt_tput(p.throughput_tps),
-                bool_str(p.supports_tools),
-                bool_str(p.supports_structured),
+                "  {} {} {} {} {} {} {}",
+                s_accent().apply_to(&name_col),
+                status_style.apply_to(&status_col),
+                s_price().apply_to(&in_col),
+                s_price().apply_to(&out_col),
+                if p.throughput_tps.unwrap_or(0.0) >= 100.0 { s_warm() } else { s_dim() }.apply_to(&tput_col),
+                if p.supports_tools == Some(true) { s_hot() } else { s_tree() }.apply_to(&tools_col),
+                if p.supports_structured == Some(true) { s_hot() } else { s_tree() }.apply_to(json_col),
             );
         }
 
@@ -668,79 +662,6 @@ fn print_model_full(model: &Model, variants: &[Model], opts: &Cli) {
         }
     }
 
-    // ── Dedicated endpoint ──
-
-    println!();
-    println!("{}", s_header().apply_to("dedicated endpoint"));
-    println!(
-        "  {} {} {} {} {} {}",
-        s_dim().apply_to("Deploy at"),
-        s_accent().apply_to(format!("huggingface.co/{}", model.id)),
-        s_dim().apply_to("\u{2192}"),
-        s_dim().apply_to("Deploy"),
-        s_dim().apply_to("\u{2192}"),
-        s_dim().apply_to("Inference Endpoints"),
-    );
-    if let Some(ref hint) = Model::param_hint(&model.id) {
-        let est = estimate_hourly(hint);
-        if !est.is_empty() {
-            println!("  {}", s_price().apply_to(est));
-        }
-    }
-
-    // ── Local ──
-
-    println!();
-    println!("{}", s_header().apply_to("local"));
-    println!(
-        "  {}",
-        s_code().apply_to(format!("vllm serve {}", model.id))
-    );
-    if let Some(ref hint) = Model::param_hint(&model.id) {
-        let vram = estimate_vram(hint);
-        if !vram.is_empty() {
-            println!("  {}", s_dim().apply_to(format!("VRAM: ~{vram}")));
-        }
-    }
-
-    // ── Variants ──
-
-    if !variants.is_empty() {
-        println!();
-        println!("{}", s_header().apply_to("variants"));
-        println!("{}", sep(64));
-
-        for v in variants.iter().take(10) {
-            let pcount = v.providers.len();
-            let param = Model::param_hint(&v.id).unwrap_or_default();
-            let prov_str = if pcount > 0 {
-                s_hot().apply_to(if pcount == 1 {
-                    "1 provider".to_string()
-                } else {
-                    format!("{pcount} providers")
-                }).to_string()
-            } else {
-                s_dim().apply_to("0 providers").to_string()
-            };
-            println!(
-                "  {:<48} {:<14} {}",
-                &v.id,
-                prov_str,
-                if param.is_empty() {
-                    String::new()
-                } else {
-                    s_param().apply_to(&param).to_string()
-                }
-            );
-        }
-
-        println!("{}", sep(64));
-    }
-
-    println!(
-        "{}",
-        s_hint().apply_to("  tip: hfp model@provider:lang for direct snippets")
-    );
     println!();
 }
 
@@ -795,7 +716,6 @@ enum NK {
     Variant(String),
     VarProv(String, String),
     VarLang(String, String, Lang),
-    Quit,
     Decor,
 }
 
@@ -819,7 +739,7 @@ struct VarProvExp {
 enum Exp {
     None,
     Prov { name: String, lang: Option<Lang> },
-    Var { id: String, data: Model, prov: Option<VarProvExp> },
+    Var { id: String, data: Box<Model>, prov: Option<VarProvExp> },
 }
 
 fn prov_summary(p: &ProviderInfo) -> String {
@@ -880,6 +800,14 @@ fn add_langs(
     }
 }
 
+fn trunc(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        s.to_string()
+    } else {
+        format!("{}\u{2026}", &s[..max - 1])
+    }
+}
+
 fn sorted_provs(providers: &[ProviderInfo]) -> Vec<&ProviderInfo> {
     let mut v: Vec<&ProviderInfo> = providers.iter().collect();
     v.sort_by(|a, b| a.readiness().cmp(&b.readiness()).then(a.name.cmp(&b.name)));
@@ -889,10 +817,17 @@ fn sorted_provs(providers: &[ProviderInfo]) -> Vec<&ProviderInfo> {
 fn build_tree(model: &Model, variants: &[Model], exp: &Exp) -> Vec<TreeNode> {
     let mut nodes = Vec::new();
 
+    nodes.push(TreeNode {
+        label: "\u{2191}\u{2193} navigate  \u{2190}\u{2192} expand/collapse  q quit"
+            .to_string(),
+        kind: NK::Decor,
+        code: false,
+    });
+
     for p in &sorted_provs(&model.providers) {
         let s = prov_summary(p);
         nodes.push(TreeNode {
-            label: format!("{:<16} {s}", p.name),
+            label: format!("{:<22} {s}", trunc(&p.name, 22)),
             kind: NK::Provider(p.name.clone()),
             code: false,
         });
@@ -919,8 +854,9 @@ fn build_tree(model: &Model, variants: &[Model], exp: &Exp) -> Vec<TreeNode> {
         } else {
             format!("  {param}")
         };
+        let short_t = trunc(short, 22);
         nodes.push(TreeNode {
-            label: format!("{short:<16} {pl}{suf}"),
+            label: format!("{short_t:<22} {pl}{suf}"),
             kind: NK::Variant(v.id.clone()),
             code: false,
         });
@@ -937,7 +873,7 @@ fn build_tree(model: &Model, variants: &[Model], exp: &Exp) -> Vec<TreeNode> {
                 for vp in &vps {
                     let vs = prov_summary(vp);
                     nodes.push(TreeNode {
-                        label: format!("  {:<14} {vs}", vp.name),
+                        label: format!("  {:<20} {vs}", trunc(&vp.name, 20)),
                         kind: NK::VarProv(v.id.clone(), vp.name.clone()),
                         code: false,
                     });
@@ -954,18 +890,16 @@ fn build_tree(model: &Model, variants: &[Model], exp: &Exp) -> Vec<TreeNode> {
         }
     }
 
-    nodes.push(TreeNode {
-        label: "quit".to_string(),
-        kind: NK::Quit,
-        code: false,
-    });
-    nodes.push(TreeNode {
-        label: "\u{2191}\u{2193} navigate  \u{2190}\u{2192} expand/collapse  q quit"
-            .to_string(),
-        kind: NK::Decor,
-        code: false,
-    });
     nodes
+}
+
+fn node_style(kind: &NK) -> Style {
+    match kind {
+        NK::Provider(_) | NK::VarProv(_, _) => Style::new().color256(10),  // bright green
+        NK::Variant(_) => Style::new().color256(14),                        // bright cyan
+        NK::Lang(_, _) | NK::VarLang(_, _, _) => Style::new().color256(15), // bright white
+        NK::Decor => Style::new().color256(8),                              // dark gray
+    }
 }
 
 fn render_tree(nodes: &[TreeNode], cursor: usize, sel: &[usize]) -> Vec<String> {
@@ -977,13 +911,11 @@ fn render_tree(nodes: &[TreeNode], cursor: usize, sel: &[usize]) -> Vec<String> 
             let pfx = if i == active { "> " } else { "  " };
             let text = format!("{pfx}{}", n.label);
             if i == active {
-                format!("{}", s_accent().bold().apply_to(&text))
+                format!("{}", node_style(&n.kind).bold().apply_to(&text))
             } else if n.code {
-                format!("{}", s_code().apply_to(&text))
-            } else if !n.selectable() {
-                format!("{}", s_hint().apply_to(&text))
+                format!("{}", Style::new().color256(11).apply_to(&text)) // bright yellow
             } else {
-                format!("{}", s_tree().apply_to(&text))
+                format!("{}", node_style(&n.kind).apply_to(&text))
             }
         })
         .collect()
@@ -1134,7 +1066,7 @@ async fn interactive_picker(
                             };
                             exp = Exp::Var {
                                 id: id.clone(),
-                                data,
+                                data: Box::new(data),
                                 prov: None,
                             };
                             let nn = build_tree(model, variants, &exp);
@@ -1197,10 +1129,6 @@ async fn interactive_picker(
                         if let Some(p) = find_sel(&nn, &ns, &kind) {
                             cursor = p;
                         }
-                    }
-                    NK::Quit => {
-                        term.clear_last_lines(drawn)?;
-                        break;
                     }
                     NK::Decor => {}
                 }
@@ -1315,36 +1243,6 @@ async fn interactive_picker(
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
-
-fn estimate_vram(param_hint: &str) -> String {
-    let b: f64 = param_hint
-        .trim_end_matches('B')
-        .trim_end_matches('b')
-        .parse()
-        .unwrap_or(0.0);
-    if b <= 0.0 {
-        return String::new();
-    }
-    format!("{:.0}GB FP16 / {:.0}GB INT8 / {:.0}GB INT4", b * 2.0, b, b * 0.5)
-}
-
-fn estimate_hourly(param_hint: &str) -> String {
-    let b: f64 = param_hint
-        .trim_end_matches('B')
-        .trim_end_matches('b')
-        .parse()
-        .unwrap_or(0.0);
-    if b <= 0.0 {
-        return String::new();
-    }
-    if b <= 13.0 {
-        "~$1.10/hr on A10G 24GB".to_string()
-    } else if b <= 70.0 {
-        "~$4.50/hr on A100 80GB".to_string()
-    } else {
-        "~$18/hr on 4xA100 80GB (multi-GPU)".to_string()
-    }
-}
 
 fn extract_core_name(model_id: &str) -> String {
     let name = model_id.split('/').next_back().unwrap_or(model_id);
