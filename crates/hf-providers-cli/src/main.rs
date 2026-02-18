@@ -56,7 +56,7 @@ fn fmt_count(n: u64) -> String {
 #[derive(Parser)]
 #[command(
     name = "hf-providers",
-    about = "Real-time inference provider comparison for Hugging Face models",
+    about = "Find inference providers for Hugging Face models, compare them, get code snippets",
     version,
     after_help = "examples:\n  \
         hf-providers deepseek-r1\n  \
