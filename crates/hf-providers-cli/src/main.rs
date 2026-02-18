@@ -66,7 +66,7 @@ fn fmt_count(n: u64) -> String {
         hf-providers flux.1-dev\n  \
         hf-providers deepseek-r1 --cheapest\n  \
         hf-providers providers groq\n  \
-        hf-providers run deepseek-r1"
+        hf-providers snippet deepseek-r1"
 )]
 struct Cli {
     query: Option<String>,
@@ -92,8 +92,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Code snippet to run a model.
-    Run {
+    /// Code snippet for a model.
+    Snippet {
         model: String,
         #[arg(long, short, default_value = "python")]
         lang: String,
@@ -124,7 +124,7 @@ async fn main() -> anyhow::Result<()> {
     let client = HfClient::with_auto_token();
 
     match cli.command {
-        Some(Commands::Run {
+        Some(Commands::Snippet {
             model,
             lang,
             provider,
@@ -333,7 +333,7 @@ async fn cmd_search(client: &HfClient, query: &str, opts: &Cli) -> anyhow::Resul
     Ok(())
 }
 
-// ── Run ──────────────────────────────────────────────────────────────
+// ── Snippet ──────────────────────────────────────────────────────────
 
 async fn cmd_run(
     client: &HfClient,

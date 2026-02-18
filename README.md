@@ -30,7 +30,7 @@ hf-providers deepseek-r1@novita:curl
 hf-providers deepseek-r1@novita:js
 
 # Get the cheapest option directly
-hf-providers run deepseek-r1 --cheapest
+hf-providers snippet deepseek-r1 --cheapest
 
 # Browse a provider's models
 hf-providers providers groq
