@@ -919,7 +919,7 @@ fn build_tree(model: &Model, variants: &[Model], var_cache: &[(String, Model)], 
     let col = max_w + 2;
 
     nodes.push(TreeNode {
-        label: "[\u{2191}\u{2193}] move  [\u{2192}] open  [\u{2190}] close  [\u{23ce}] copy  [q] quit"
+        label: "[\u{2191}\u{2193}] move  [\u{2192}] open  [\u{2190}] close  [\u{23ce}] copy  [q/esc] quit"
             .to_string(),
         detail: String::new(),
         readiness: None,

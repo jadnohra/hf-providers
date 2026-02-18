@@ -53,7 +53,7 @@ When run in a terminal, `hf-providers` opens an interactive tree browser:
 - Right arrow expands models into providers, providers into languages
 - Code snippets auto-expand when you land on a language
 - `c` or Enter copies the visible snippet to clipboard
-- `q` to quit
+- `q` or Esc to quit
 
 ![trending](assets/trending.png)
 
