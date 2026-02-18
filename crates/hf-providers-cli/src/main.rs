@@ -788,180 +788,234 @@ fn print_search_results(query: &str, models: &[Model]) {
 
 // ── Interactive tree browser ─────────────────────────────────────────
 
-#[derive(Clone)]
-enum TreeAction {
-    ToggleProvider(String),
-    ToggleLang(String, Lang),
-    DrillVariant(String),
+#[derive(Clone, PartialEq)]
+enum NK {
+    Provider(String),
+    Lang(String, Lang),
+    Variant(String),
+    VarProv(String, String),
+    VarLang(String, String, Lang),
     Quit,
+    Decor,
 }
 
 struct TreeNode {
     label: String,
-    action: Option<TreeAction>,
+    kind: NK,
     code: bool,
 }
 
-fn build_tree(
-    model: &Model,
-    variants: &[Model],
-    exp_prov: &Option<String>,
-    exp_lang: &Option<(String, Lang)>,
-) -> Vec<TreeNode> {
-    let mut nodes = Vec::new();
+impl TreeNode {
+    fn selectable(&self) -> bool {
+        !self.code && self.kind != NK::Decor
+    }
+}
 
-    let mut provs: Vec<&ProviderInfo> = model.providers.iter().collect();
-    provs.sort_by(|a, b| a.readiness().cmp(&b.readiness()).then(a.name.cmp(&b.name)));
+struct VarProvExp {
+    name: String,
+    lang: Option<Lang>,
+}
 
-    for p in &provs {
-        let r = match p.readiness() {
-            Readiness::Hot => "\u{25cf} hot",
-            Readiness::Warm => "\u{25d0} warm",
-            Readiness::Cold => "\u{25cb} cold",
-            Readiness::Unavailable => "\u{2717} unavail",
-        };
-        let price = match (p.input_price_per_m, p.output_price_per_m) {
-            (Some(i), Some(o)) => format!("  ${:.2}/${:.2}", i, o),
-            _ => String::new(),
-        };
-        let tput = p
-            .throughput_tps
-            .map(|t| format!("  {:.0} t/s", t))
-            .unwrap_or_default();
+enum Exp {
+    None,
+    Prov { name: String, lang: Option<Lang> },
+    Var { id: String, data: Model, prov: Option<VarProvExp> },
+}
 
+fn prov_summary(p: &ProviderInfo) -> String {
+    let r = match p.readiness() {
+        Readiness::Hot => "\u{25cf} hot",
+        Readiness::Warm => "\u{25d0} warm",
+        Readiness::Cold => "\u{25cb} cold",
+        Readiness::Unavailable => "\u{2717} unavail",
+    };
+    let price = match (p.input_price_per_m, p.output_price_per_m) {
+        (Some(i), Some(o)) => format!("  ${:.2}/${:.2}", i, o),
+        _ => String::new(),
+    };
+    let tput = p
+        .throughput_tps
+        .map(|t| format!("  {:.0} t/s", t))
+        .unwrap_or_default();
+    format!("{r}{price}{tput}")
+}
+
+fn lang_name(l: Lang) -> &'static str {
+    match l {
+        Lang::Python => "python",
+        Lang::Curl => "curl",
+        Lang::Javascript => "javascript",
+    }
+}
+
+const LANGS: [Lang; 3] = [Lang::Python, Lang::Curl, Lang::Javascript];
+
+fn add_langs(
+    nodes: &mut Vec<TreeNode>,
+    mdl: &Model,
+    prov: &ProviderInfo,
+    exp_lang: &Option<Lang>,
+    pad: &str,
+    mk: &dyn Fn(&str, Lang) -> NK,
+) {
+    for (j, &lang) in LANGS.iter().enumerate() {
+        let last = j == 2;
+        let conn = if last { "\u{2514}\u{2500}" } else { "\u{251c}\u{2500}" };
         nodes.push(TreeNode {
-            label: format!("{:<16} {}{}{}", p.name, r, price, tput),
-            action: Some(TreeAction::ToggleProvider(p.name.clone())),
+            label: format!("{pad}{conn} {}", lang_name(lang)),
+            kind: mk(&prov.name, lang),
             code: false,
         });
-
-        if exp_prov.as_deref() == Some(p.name.as_str()) {
-            let langs = [Lang::Python, Lang::Curl, Lang::Javascript];
-            for (j, &lang) in langs.iter().enumerate() {
-                let is_last = j == langs.len() - 1;
-                let conn = if is_last { "\u{2514}\u{2500}" } else { "\u{251c}\u{2500}" };
-                let name = match lang {
-                    Lang::Python => "python",
-                    Lang::Curl => "curl",
-                    Lang::Javascript => "javascript",
-                };
+        if *exp_lang == Some(lang) {
+            let code = snippet::generate(mdl, prov, lang);
+            let cont = if last { "   " } else { "\u{2502}  " };
+            for line in code.lines() {
                 nodes.push(TreeNode {
-                    label: format!("  {conn} {name}"),
-                    action: Some(TreeAction::ToggleLang(p.name.clone(), lang)),
-                    code: false,
+                    label: format!("{pad}{cont}{line}"),
+                    kind: NK::Decor,
+                    code: true,
                 });
+            }
+        }
+    }
+}
 
-                if exp_lang.as_ref() == Some(&(p.name.clone(), lang)) {
-                    let code = snippet::generate(model, p, lang);
-                    let cont = if is_last { "   " } else { "\u{2502}  " };
-                    for line in code.lines() {
-                        nodes.push(TreeNode {
-                            label: format!("  {cont}{line}"),
-                            action: None,
-                            code: true,
-                        });
+fn sorted_provs(providers: &[ProviderInfo]) -> Vec<&ProviderInfo> {
+    let mut v: Vec<&ProviderInfo> = providers.iter().collect();
+    v.sort_by(|a, b| a.readiness().cmp(&b.readiness()).then(a.name.cmp(&b.name)));
+    v
+}
+
+fn build_tree(model: &Model, variants: &[Model], exp: &Exp) -> Vec<TreeNode> {
+    let mut nodes = Vec::new();
+
+    for p in &sorted_provs(&model.providers) {
+        let s = prov_summary(p);
+        nodes.push(TreeNode {
+            label: format!("{:<16} {s}", p.name),
+            kind: NK::Provider(p.name.clone()),
+            code: false,
+        });
+        if let Exp::Prov { name, lang } = exp {
+            if name == &p.name {
+                add_langs(&mut nodes, model, p, lang, "  ", &|pn, l| {
+                    NK::Lang(pn.to_string(), l)
+                });
+            }
+        }
+    }
+
+    for v in variants.iter().take(8) {
+        let short = v.id.rsplit('/').next().unwrap_or(&v.id);
+        let pc = v.providers.len();
+        let param = Model::param_hint(&v.id).unwrap_or_default();
+        let pl = if pc == 1 {
+            "1 provider".to_string()
+        } else {
+            format!("{pc} providers")
+        };
+        let suf = if param.is_empty() {
+            String::new()
+        } else {
+            format!("  {param}")
+        };
+        nodes.push(TreeNode {
+            label: format!("{short:<16} {pl}{suf}"),
+            kind: NK::Variant(v.id.clone()),
+            code: false,
+        });
+        if let Exp::Var { id, data, prov } = exp {
+            if id == &v.id {
+                let vps = sorted_provs(&data.providers);
+                if vps.is_empty() {
+                    nodes.push(TreeNode {
+                        label: "  (no providers)".to_string(),
+                        kind: NK::Decor,
+                        code: false,
+                    });
+                }
+                for vp in &vps {
+                    let vs = prov_summary(vp);
+                    nodes.push(TreeNode {
+                        label: format!("  {:<14} {vs}", vp.name),
+                        kind: NK::VarProv(v.id.clone(), vp.name.clone()),
+                        code: false,
+                    });
+                    if let Some(VarProvExp { name: pn, lang }) = prov {
+                        if pn == &vp.name {
+                            let vid = v.id.clone();
+                            add_langs(&mut nodes, data, vp, lang, "    ", &|pn, l| {
+                                NK::VarLang(vid.clone(), pn.to_string(), l)
+                            });
+                        }
                     }
                 }
             }
         }
     }
 
-    if !variants.is_empty() {
-        nodes.push(TreeNode {
-            label: "\u{2500}\u{2500} variants \u{2500}\u{2500}".to_string(),
-            action: None,
-            code: false,
-        });
-        for v in variants.iter().take(8) {
-            let short = v.id.rsplit('/').next().unwrap_or(&v.id);
-            let pcount = v.providers.len();
-            let param = Model::param_hint(&v.id).unwrap_or_default();
-            let plabel = if pcount == 1 {
-                "1 provider".to_string()
-            } else {
-                format!("{pcount} providers")
-            };
-            let suffix = if param.is_empty() {
-                String::new()
-            } else {
-                format!("  {param}")
-            };
-            nodes.push(TreeNode {
-                label: format!("\u{21b3} {short}  {plabel}{suffix}"),
-                action: Some(TreeAction::DrillVariant(v.id.clone())),
-                code: false,
-            });
-        }
-    }
-
     nodes.push(TreeNode {
         label: "quit".to_string(),
-        action: Some(TreeAction::Quit),
+        kind: NK::Quit,
         code: false,
     });
-
     nodes.push(TreeNode {
-        label: "\u{2191}\u{2193} navigate  enter expand  q quit".to_string(),
-        action: None,
+        label: "\u{2191}\u{2193} navigate  \u{2190}\u{2192} expand/collapse  q quit"
+            .to_string(),
+        kind: NK::Decor,
         code: false,
     });
-
     nodes
 }
 
 fn render_tree(nodes: &[TreeNode], cursor: usize, sel: &[usize]) -> Vec<String> {
     let active = sel.get(cursor).copied().unwrap_or(usize::MAX);
-    let mut lines = Vec::new();
-    for (i, node) in nodes.iter().enumerate() {
-        let is_active = i == active;
-        let prefix = if is_active { "> " } else { "  " };
-        let text = format!("{prefix}{}", node.label);
-        if is_active {
-            lines.push(format!("{}", s_accent().bold().apply_to(&text)));
-        } else if node.code {
-            lines.push(format!("{}", s_code().apply_to(&text)));
-        } else if node.action.is_none() {
-            lines.push(format!("{}", s_hint().apply_to(&text)));
-        } else {
-            lines.push(format!("{}", s_tree().apply_to(&text)));
-        }
-    }
-    lines
-}
-
-fn selectables(nodes: &[TreeNode]) -> Vec<usize> {
     nodes
         .iter()
         .enumerate()
-        .filter(|(_, n)| n.action.is_some())
+        .map(|(i, n)| {
+            let pfx = if i == active { "> " } else { "  " };
+            let text = format!("{pfx}{}", n.label);
+            if i == active {
+                format!("{}", s_accent().bold().apply_to(&text))
+            } else if n.code {
+                format!("{}", s_code().apply_to(&text))
+            } else if !n.selectable() {
+                format!("{}", s_hint().apply_to(&text))
+            } else {
+                format!("{}", s_tree().apply_to(&text))
+            }
+        })
+        .collect()
+}
+
+fn sel_indices(nodes: &[TreeNode]) -> Vec<usize> {
+    nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, n)| n.selectable())
         .map(|(i, _)| i)
         .collect()
 }
 
-fn find_cursor(nodes: &[TreeNode], sel: &[usize], target: &TreeAction) -> Option<usize> {
-    sel.iter().position(|&ni| match (&nodes[ni].action, target) {
-        (Some(TreeAction::ToggleProvider(a)), TreeAction::ToggleProvider(b)) => a == b,
-        (Some(TreeAction::ToggleLang(pa, la)), TreeAction::ToggleLang(pb, lb)) => {
-            pa == pb && la == lb
-        }
-        _ => false,
-    })
+fn find_sel(nodes: &[TreeNode], sel: &[usize], target: &NK) -> Option<usize> {
+    sel.iter().position(|&ni| &nodes[ni].kind == target)
 }
 
 async fn interactive_picker(
     client: &HfClient,
-    mut model: Model,
-    mut variants: Vec<Model>,
+    model: &Model,
+    variants: &[Model],
 ) -> anyhow::Result<()> {
     let term = Term::stderr();
-    let mut exp_prov: Option<String> = None;
-    let mut exp_lang: Option<(String, Lang)> = None;
+    let mut exp = Exp::None;
     let mut cursor: usize = 0;
     let mut drawn: usize = 0;
+    let mut var_cache: Vec<(String, Model)> = Vec::new();
 
     loop {
-        let nodes = build_tree(&model, &variants, &exp_prov, &exp_lang);
-        let sel = selectables(&nodes);
+        let nodes = build_tree(model, variants, &exp);
+        let sel = sel_indices(&nodes);
         if sel.is_empty() {
             break;
         }
@@ -982,99 +1036,273 @@ async fn interactive_picker(
         }?;
 
         match key {
-            Key::ArrowUp | Key::Char('k') => {
-                cursor = cursor.saturating_sub(1);
-            }
+            Key::ArrowUp | Key::Char('k') => cursor = cursor.saturating_sub(1),
             Key::ArrowDown | Key::Char('j') => {
                 if cursor + 1 < sel.len() {
                     cursor += 1;
                 }
             }
-            Key::Enter => {
-                let action = nodes[sel[cursor]].action.clone();
-                match action {
-                    Some(TreeAction::ToggleProvider(ref name)) => {
-                        if exp_prov.as_deref() == Some(name) {
-                            exp_prov = None;
-                            exp_lang = None;
-                        } else {
-                            exp_prov = Some(name.clone());
-                            exp_lang = None;
-                        }
-                        let nn = build_tree(&model, &variants, &exp_prov, &exp_lang);
-                        let ns = selectables(&nn);
-                        if let Some(pos) = find_cursor(&nn, &ns, action.as_ref().unwrap()) {
-                            cursor = pos;
-                        }
-                    }
-                    Some(TreeAction::ToggleLang(ref pname, lang)) => {
-                        let key = (pname.clone(), lang);
-                        if exp_lang.as_ref() == Some(&key) {
-                            exp_lang = None;
-                        } else {
-                            exp_lang = Some(key);
-                        }
-                        let nn = build_tree(&model, &variants, &exp_prov, &exp_lang);
-                        let ns = selectables(&nn);
-                        if let Some(pos) = find_cursor(&nn, &ns, action.as_ref().unwrap()) {
-                            cursor = pos;
-                        }
-                    }
-                    Some(TreeAction::DrillVariant(ref id)) => {
-                        term.clear_last_lines(drawn)?;
-                        drawn = 0;
-                        term.write_line(&format!(
-                            "{}",
-                            s_dim().apply_to("loading...")
-                        ))?;
 
-                        let data = match client.model_info(id).await {
-                            Ok(d) => d,
-                            Err(e) => {
-                                term.clear_last_lines(1)?;
-                                eprintln!(
-                                    "{}",
-                                    s_err().apply_to(format!("error: {e}"))
-                                );
-                                continue;
+            // ── Expand / drill right ─────────────────────────────
+            Key::ArrowRight | Key::Char('l') | Key::Enter => {
+                let kind = nodes[sel[cursor]].kind.clone();
+                match kind {
+                    NK::Provider(ref name) => {
+                        let already =
+                            matches!(&exp, Exp::Prov { name: n, .. } if n == name);
+                        if already {
+                            // Move cursor into first lang child
+                            let t = NK::Lang(name.clone(), Lang::Python);
+                            if let Some(p) = find_sel(&nodes, &sel, &t) {
+                                cursor = p;
                             }
-                        };
-                        term.clear_last_lines(1)?;
-
-                        if let Some(m) = parse_model(&data) {
-                            let core = extract_core_name(&m.id);
-                            let vr =
-                                client.search_models(&core, 15).await.unwrap_or_default();
-                            let new_v: Vec<Model> = vr
-                                .iter()
-                                .filter_map(parse_model)
-                                .filter(|v| v.id != m.id)
-                                .collect();
-
-                            let opts = Cli {
-                                query: None,
-                                command: None,
-                                cheapest: false,
-                                fastest: false,
-                                tools: false,
-                                hot: false,
-                                json: false,
+                        } else {
+                            exp = Exp::Prov {
+                                name: name.clone(),
+                                lang: None,
                             };
-                            print_model_full(&m, &new_v, &opts);
-                            model = m;
-                            variants = new_v;
-                            exp_prov = None;
-                            exp_lang = None;
-                            cursor = 0;
+                            let nn = build_tree(model, variants, &exp);
+                            let ns = sel_indices(&nn);
+                            if let Some(p) = find_sel(&nn, &ns, &kind) {
+                                cursor = p;
+                            }
                         }
                     }
-                    Some(TreeAction::Quit) => {
+                    NK::Lang(ref pname, lang) => {
+                        if let Exp::Prov {
+                            name: ref en,
+                            lang: ref mut el,
+                        } = exp
+                        {
+                            if en == pname && *el != Some(lang) {
+                                *el = Some(lang);
+                            }
+                        }
+                        let nn = build_tree(model, variants, &exp);
+                        let ns = sel_indices(&nn);
+                        if let Some(p) = find_sel(&nn, &ns, &kind) {
+                            cursor = p;
+                        }
+                    }
+                    NK::Variant(ref id) => {
+                        let already =
+                            matches!(&exp, Exp::Var { id: vid, .. } if vid == id);
+                        if already {
+                            // Move into first child provider
+                            let nn = build_tree(model, variants, &exp);
+                            let ns = sel_indices(&nn);
+                            let pos = ns.iter().position(|&ni| {
+                                matches!(&nn[ni].kind, NK::VarProv(v, _) if v == id)
+                            });
+                            if let Some(p) = pos {
+                                cursor = p;
+                            }
+                        } else {
+                            // Fetch or use cache
+                            let cached = var_cache
+                                .iter()
+                                .find(|(k, _)| k == id)
+                                .map(|(_, v)| v.clone());
+                            let data = if let Some(d) = cached {
+                                d
+                            } else {
+                                term.clear_last_lines(drawn)?;
+                                drawn = 0;
+                                term.write_line(&format!(
+                                    "{}",
+                                    s_dim().apply_to("loading...")
+                                ))?;
+                                let raw = match client.model_info(id).await {
+                                    Ok(d) => d,
+                                    Err(e) => {
+                                        term.clear_last_lines(1)?;
+                                        eprintln!(
+                                            "{}",
+                                            s_err().apply_to(format!("error: {e}"))
+                                        );
+                                        continue;
+                                    }
+                                };
+                                term.clear_last_lines(1)?;
+                                match parse_model(&raw) {
+                                    Some(m) => {
+                                        var_cache.push((id.clone(), m.clone()));
+                                        m
+                                    }
+                                    None => continue,
+                                }
+                            };
+                            exp = Exp::Var {
+                                id: id.clone(),
+                                data,
+                                prov: None,
+                            };
+                            let nn = build_tree(model, variants, &exp);
+                            let ns = sel_indices(&nn);
+                            if let Some(p) = find_sel(&nn, &ns, &kind) {
+                                cursor = p;
+                            }
+                        }
+                    }
+                    NK::VarProv(ref vid, ref pname) => {
+                        if let Exp::Var {
+                            id: ref eid,
+                            prov: ref mut ep,
+                            ..
+                        } = exp
+                        {
+                            if eid == vid {
+                                let already = ep
+                                    .as_ref()
+                                    .map(|p| &p.name == pname)
+                                    .unwrap_or(false);
+                                if already {
+                                    let t = NK::VarLang(
+                                        vid.clone(),
+                                        pname.clone(),
+                                        Lang::Python,
+                                    );
+                                    let nn = build_tree(model, variants, &exp);
+                                    let ns = sel_indices(&nn);
+                                    if let Some(p) = find_sel(&nn, &ns, &t) {
+                                        cursor = p;
+                                    }
+                                } else {
+                                    *ep = Some(VarProvExp {
+                                        name: pname.clone(),
+                                        lang: None,
+                                    });
+                                    let nn = build_tree(model, variants, &exp);
+                                    let ns = sel_indices(&nn);
+                                    if let Some(p) = find_sel(&nn, &ns, &kind) {
+                                        cursor = p;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    NK::VarLang(ref vid, ref pname, lang) => {
+                        if let Exp::Var {
+                            id: ref eid,
+                            prov: Some(ref mut pe),
+                            ..
+                        } = exp
+                        {
+                            if eid == vid && &pe.name == pname && pe.lang != Some(lang) {
+                                pe.lang = Some(lang);
+                            }
+                        }
+                        let nn = build_tree(model, variants, &exp);
+                        let ns = sel_indices(&nn);
+                        if let Some(p) = find_sel(&nn, &ns, &kind) {
+                            cursor = p;
+                        }
+                    }
+                    NK::Quit => {
                         term.clear_last_lines(drawn)?;
                         break;
                     }
-                    None => {}
+                    NK::Decor => {}
                 }
             }
+
+            // ── Collapse / go to parent left ─────────────────────
+            Key::ArrowLeft | Key::Char('h') => {
+                let kind = nodes[sel[cursor]].kind.clone();
+                let mut need_rebuild = false;
+
+                match kind {
+                    NK::Provider(ref name) => {
+                        if matches!(&exp, Exp::Prov { name: n, .. } if n == name) {
+                            exp = Exp::None;
+                            need_rebuild = true;
+                        }
+                    }
+                    NK::Lang(ref pname, this_lang) => {
+                        if let Exp::Prov {
+                            name: ref en,
+                            lang: ref mut el,
+                        } = exp
+                        {
+                            if en == pname {
+                                if *el == Some(this_lang) {
+                                    *el = None;
+                                    need_rebuild = true;
+                                } else {
+                                    // Go to parent provider
+                                    let t = NK::Provider(pname.clone());
+                                    if let Some(p) = find_sel(&nodes, &sel, &t) {
+                                        cursor = p;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    NK::Variant(ref id) => {
+                        if matches!(&exp, Exp::Var { id: vid, .. } if vid == id) {
+                            exp = Exp::None;
+                            need_rebuild = true;
+                        }
+                    }
+                    NK::VarProv(ref vid, ref pname) => {
+                        if let Exp::Var {
+                            id: ref eid,
+                            prov: ref mut ep,
+                            ..
+                        } = exp
+                        {
+                            if eid == vid {
+                                let this_exp = ep
+                                    .as_ref()
+                                    .map(|p| &p.name == pname)
+                                    .unwrap_or(false);
+                                if this_exp {
+                                    *ep = None;
+                                    need_rebuild = true;
+                                } else {
+                                    let t = NK::Variant(vid.clone());
+                                    if let Some(p) = find_sel(&nodes, &sel, &t) {
+                                        cursor = p;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    NK::VarLang(ref vid, ref pname, this_lang) => {
+                        if let Exp::Var {
+                            id: ref eid,
+                            prov: Some(ref mut pe),
+                            ..
+                        } = exp
+                        {
+                            if eid == vid && &pe.name == pname {
+                                if pe.lang == Some(this_lang) {
+                                    pe.lang = None;
+                                    need_rebuild = true;
+                                } else {
+                                    let t =
+                                        NK::VarProv(vid.clone(), pname.clone());
+                                    if let Some(p) = find_sel(&nodes, &sel, &t) {
+                                        cursor = p;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+
+                if need_rebuild {
+                    let nn = build_tree(model, variants, &exp);
+                    let ns = sel_indices(&nn);
+                    if let Some(p) = find_sel(&nn, &ns, &kind) {
+                        cursor = p;
+                    } else {
+                        cursor = cursor.min(ns.len().saturating_sub(1));
+                    }
+                }
+            }
+
             Key::Escape | Key::Char('q') | Key::Char('\u{3}') => {
                 term.clear_last_lines(drawn)?;
                 break;
