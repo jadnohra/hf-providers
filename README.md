@@ -1,6 +1,6 @@
 # hf-providers
 
-Inference provider comparison for Hugging Face models -- pricing, throughput, status, and ready-to-use code snippets.
+Real-time inference provider comparison for Hugging Face models -- pricing, throughput, status, and ready-to-use code snippets.
 
 ![demo](assets/demo.gif)
 

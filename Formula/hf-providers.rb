@@ -1,5 +1,5 @@
 class HfProviders < Formula
-  desc "Inference provider comparison for Hugging Face models"
+  desc "Real-time inference provider comparison for Hugging Face models"
   homepage "https://github.com/jadnohra/hf-providers"
   version "0.1.0"
   license any_of: ["MIT", "Apache-2.0"]
