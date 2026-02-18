@@ -1,6 +1,6 @@
 # hf-providers
 
-Find out how to run any Hugging Face model -- compare providers, pricing, throughput, and get ready-to-use code snippets.
+Inference provider comparison for Hugging Face models -- pricing, throughput, status, and ready-to-use code snippets.
 
 ![demo](assets/demo.gif)
 
