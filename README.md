@@ -2,22 +2,7 @@
 
 Find out how to run any Hugging Face model -- compare providers, pricing, throughput, and get ready-to-use code snippets.
 
-```
-$ hf-providers deepseek-r1
-
-deepseek-ai/DeepSeek-R1  text-generation  671B
-  vllm  ·  deepseek-v3  ·  chat  ·  paper  ·  endpoints  ·  fp8
-
-Provider     Status     In $/1M   Out $/1M   Tput       Tools   JSON
-fireworks-ai ● hot      $0.20     $0.60      180 t/s    ✓       ✓
-novita       ● hot      $0.27     $1.10      155 t/s    ─       ✓
-sambanova    ● hot      $0.00     $0.00      398 t/s    ─       ─
-nebius       ● hot      $0.45     $1.80      120 t/s    ✓       ✓
-...
-
-cheapest:  sambanova   $0.00/$0.00     398 t/s
-fastest:   sambanova   $0.00/$0.00     398 t/s
-```
+![demo](assets/demo.gif)
 
 ## Install
 
@@ -69,6 +54,10 @@ When run in a terminal, `hf-providers` opens an interactive tree browser:
 - Code snippets auto-expand when you land on a language
 - `c` or Enter copies the visible snippet to clipboard
 - `q` to quit
+
+![trending](assets/trending.png)
+
+![search](assets/search.png)
 
 ## Authentication
 
