@@ -1,6 +1,6 @@
 # hf-providers
 
-Real-time inference provider comparison for Hugging Face models -- pricing, throughput, status, and ready-to-use code snippets.
+Real-time inference provider comparison for Hugging Face models. Pricing, throughput, status, and ready-to-use code snippets.
 
 ![demo](assets/demo.gif)
 
@@ -63,7 +63,7 @@ When run in a terminal, `hf-providers` opens an interactive tree browser:
 
 Set `HF_TOKEN` or `HUGGING_FACE_HUB_TOKEN`, or log in with `huggingface-cli login`. The token is read automatically from `~/.cache/huggingface/token`.
 
-A token is optional but recommended -- authenticated requests get higher rate limits and access to gated models.
+A token is optional but recommended. Authenticated requests get higher rate limits and access to gated models.
 
 ## Providers
 
