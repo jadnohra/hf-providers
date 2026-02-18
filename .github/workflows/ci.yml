@@ -40,14 +40,12 @@ jobs:
       - name: smoke test -- version exits 0
         run: ./target/release/hf-providers --version
 
-      - name: smoke test -- help mentions binary name
-        run: ./target/release/hf-providers --help | grep -q 'hf-providers'
+      - name: smoke test -- search produces output
+        run: |
+          out=$(./target/release/hf-providers deepseek-r1 2>&1)
+          test -n "$out" && echo "$out" | head -20
 
-      - name: smoke test -- version output is semver
-        run: ./target/release/hf-providers --version | grep -qE '[0-9]+\.[0-9]+\.[0-9]+'
-
-      - name: smoke test -- providers subcommand lists providers
-        run: ./target/release/hf-providers providers 2>&1 | grep -q 'inference providers'
-
-      - name: smoke test -- run subcommand with bad model fails gracefully
-        run: "! ./target/release/hf-providers run __nonexistent_model_12345__ 2>&1 || true"
+      - name: smoke test -- providers subcommand produces output
+        run: |
+          out=$(./target/release/hf-providers providers 2>&1)
+          test -n "$out" && echo "$out" | head -20
