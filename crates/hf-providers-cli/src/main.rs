@@ -66,7 +66,8 @@ fn fmt_count(n: u64) -> String {
         hf-providers flux.1-dev\n  \
         hf-providers deepseek-r1 --cheapest\n  \
         hf-providers providers groq\n  \
-        hf-providers snippet deepseek-r1"
+        hf-providers snippet deepseek-r1\n  \
+        hf-providers                             (trending models)"
 )]
 struct Cli {
     query: Option<String>,
