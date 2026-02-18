@@ -6,7 +6,7 @@ license.workspace = true
 description.workspace = true
 
 [[bin]]
-name = "hfp"
+name = "hf-providers"
 path = "src/main.rs"
 
 [dependencies]
@@ -16,4 +16,5 @@ serde_json.workspace = true
 clap = { version = "4", features = ["derive"] }
 console = "0.15"
 anyhow = "1"
+comfy-table = "7"
 chrono = "0.4"

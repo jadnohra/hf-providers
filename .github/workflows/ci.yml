@@ -35,7 +35,7 @@ jobs:
         run: cargo build --release
 
       - name: smoke test -- help exits 0
-        run: ./target/release/hfp --help
+        run: ./target/release/hf-providers --help
 
       - name: smoke test -- version exits 0
-        run: ./target/release/hfp --version
+        run: ./target/release/hf-providers --version

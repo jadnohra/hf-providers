@@ -1,6 +1,8 @@
+use std::io::Write as _;
 use std::str::FromStr;
 
 use clap::{Parser, Subcommand};
+use comfy_table::{presets, Cell, Color, ContentArrangement, Table};
 use console::{Key, Style, Term};
 use hf_providers_core::{
     api::{parse_model, HfClient},
@@ -23,7 +25,6 @@ fn s_price() -> Style  { Style::new().color256(109) }         // teal
 fn s_bold() -> Style   { Style::new().bold() }
 fn s_accent() -> Style { Style::new().color256(109) }         // teal accent
 fn s_label() -> Style  { Style::new().color256(146) }         // muted lavender
-fn s_code() -> Style   { Style::new().color256(180) }         // warm tan
 fn s_heart() -> Style  { Style::new().color256(168) }         // rose
 fn s_param() -> Style  { Style::new().color256(139) }         // mauve
 
@@ -54,18 +55,18 @@ fn fmt_count(n: u64) -> String {
 
 #[derive(Parser)]
 #[command(
-    name = "hfp",
+    name = "hf-providers",
     about = "Find out how to run any Hugging Face model",
     version,
     after_help = "examples:\n  \
-        hfp deepseek-r1\n  \
-        hfp deepseek-r1@novita         (python snippet via novita)\n  \
-        hfp deepseek-r1@novita:curl    (curl snippet via novita)\n  \
-        hfp meta-llama/Llama-3.3-70B-Instruct\n  \
-        hfp flux.1-dev\n  \
-        hfp deepseek-r1 --cheapest\n  \
-        hfp providers groq\n  \
-        hfp run deepseek-r1"
+        hf-providers deepseek-r1\n  \
+        hf-providers deepseek-r1@novita         (python snippet via novita)\n  \
+        hf-providers deepseek-r1@novita:curl    (curl snippet via novita)\n  \
+        hf-providers meta-llama/Llama-3.3-70B-Instruct\n  \
+        hf-providers flux.1-dev\n  \
+        hf-providers deepseek-r1 --cheapest\n  \
+        hf-providers providers groq\n  \
+        hf-providers run deepseek-r1"
 )]
 struct Cli {
     query: Option<String>,
@@ -151,8 +152,7 @@ async fn main() -> anyhow::Result<()> {
                     cmd_search(&client, &model, &cli).await?;
                 }
             } else {
-                use clap::CommandFactory;
-                Cli::command().print_help()?;
+                cmd_trending(&client).await?;
             }
         }
     }
@@ -182,6 +182,60 @@ fn parse_query(raw: &str) -> (String, Option<String>, Option<String>) {
     } else {
         (raw.to_string(), None, None)
     }
+}
+
+// ── Trending ─────────────────────────────────────────────────────────
+
+async fn cmd_trending(client: &HfClient) -> anyhow::Result<()> {
+    let term = Term::stderr();
+    term.write_line(&format!("{}", s_dim().apply_to("loading...")))?;
+
+    let results = client.trending_models(30).await?;
+    term.clear_last_lines(1)?;
+
+    let models: Vec<Model> = results
+        .iter()
+        .filter_map(parse_model)
+        .filter(|m| !m.providers.is_empty())
+        .take(10)
+        .collect();
+
+    if models.is_empty() {
+        eprintln!("{}", s_err().apply_to("error: could not fetch trending models"));
+        return Ok(());
+    }
+
+    println!();
+    println!("{}", s_header().apply_to("trending models"));
+    println!("{}", sep(64));
+
+    for m in &models {
+        let pcount = m.providers.len();
+        let tag = m.pipeline_tag.as_deref().unwrap_or("");
+        let param = Model::param_hint(&m.id).unwrap_or_default();
+        let prov_str = s_hot().apply_to(format!("{pcount} providers")).to_string();
+
+        println!(
+            "  {:<45} {:<18} {:<14} {}",
+            s_bold().apply_to(&m.id),
+            s_label().apply_to(tag),
+            prov_str,
+            if param.is_empty() {
+                String::new()
+            } else {
+                s_param().apply_to(&param).to_string()
+            }
+        );
+    }
+
+    println!("{}", sep(64));
+
+    if term.is_term() {
+        let (first, rest) = models.split_first().unwrap();
+        interactive_picker(client, first, rest).await?;
+    }
+
+    Ok(())
 }
 
 // ── Search ───────────────────────────────────────────────────────────
@@ -216,7 +270,7 @@ async fn cmd_search(client: &HfClient, query: &str, opts: &Cli) -> anyhow::Resul
             eprintln!(
                 "{}",
                 s_dim().apply_to(format!(
-                    "  Or broaden search: hfp {}",
+                    "  Or broaden search: hf-providers {}",
                     query.split('-').next().unwrap_or(query)
                 ))
             );
@@ -377,7 +431,7 @@ async fn cmd_providers(
             println!(
                 "{}",
                 s_hint().apply_to(format!(
-                    "  {} models   hfp <model> for details",
+                    "  {} models   hf-providers <model> for details",
                     models.len()
                 ))
             );
@@ -405,7 +459,7 @@ async fn cmd_providers(
             println!(
                 "{}",
                 s_hint().apply_to(format!(
-                    "  {} providers   hfp providers <name> for models",
+                    "  {} providers   hf-providers providers <name> for models",
                     PROVIDERS.len()
                 ))
             );
@@ -585,80 +639,76 @@ fn print_model_full(model: &Model, _variants: &[Model], opts: &Cli) {
         println!("{}", sep(64));
     } else {
         println!("{}", s_header().apply_to("serverless providers"));
-        println!("{}", sep(64));
 
-        println!(
-            "  {} {} {} {} {} {} {}",
-            s_dim().apply_to(format!("{:<16}", "Provider")),
-            s_dim().apply_to(format!("{:<10}", "Status")),
-            s_dim().apply_to(format!("{:<9}", "In $/1M")),
-            s_dim().apply_to(format!("{:<9}", "Out $/1M")),
-            s_dim().apply_to(format!("{:<9}", "Tput")),
-            s_dim().apply_to(format!("{:<6}", "Tools")),
-            s_dim().apply_to("JSON"),
-        );
+        let mut table = Table::new();
+        table
+            .load_preset(presets::NOTHING)
+            .set_content_arrangement(ContentArrangement::Dynamic)
+            .set_header(vec![
+                Cell::new("Provider").fg(Color::AnsiValue(248)),
+                Cell::new("Status").fg(Color::AnsiValue(248)),
+                Cell::new("In $/1M").fg(Color::AnsiValue(248)),
+                Cell::new("Out $/1M").fg(Color::AnsiValue(248)),
+                Cell::new("Tput").fg(Color::AnsiValue(248)),
+                Cell::new("Tools").fg(Color::AnsiValue(248)),
+                Cell::new("JSON").fg(Color::AnsiValue(248)),
+            ]);
 
         for p in &providers {
-            // Pad plain strings first, then colorize to avoid ANSI length issues.
-            let name_col = format!("{:<16}", p.name);
-            let status_col = format!("{:<10}", p.readiness());
-            let in_col = format!("{:<9}", p.input_price_per_m.map(|v| format!("${:.2}", v)).unwrap_or_else(|| "\u{2500}".into()));
-            let out_col = format!("{:<9}", p.output_price_per_m.map(|v| format!("${:.2}", v)).unwrap_or_else(|| "\u{2500}".into()));
-            let tput_col = format!("{:<9}", p.throughput_tps.map(|v| format!("{:.0} t/s", v)).unwrap_or_else(|| "\u{2500}".into()));
-            let tools_col = format!("{:<6}", if p.supports_tools == Some(true) { "\u{2713}" } else { "\u{2500}" });
-            let json_col = if p.supports_structured == Some(true) { "\u{2713}" } else { "\u{2500}" };
-
-            let status_style = match p.readiness() {
-                Readiness::Hot => s_hot(),
-                Readiness::Warm => s_warm(),
-                Readiness::Cold => s_cold(),
-                Readiness::Unavailable => s_err(),
+            let status_color = match p.readiness() {
+                Readiness::Hot => Color::AnsiValue(114),
+                Readiness::Warm => Color::AnsiValue(214),
+                Readiness::Cold => Color::AnsiValue(208),
+                Readiness::Unavailable => Color::AnsiValue(245),
             };
+            let dash = "\u{2500}";
+            let check = "\u{2713}";
 
-            println!(
-                "  {} {} {} {} {} {} {}",
-                s_accent().apply_to(&name_col),
-                status_style.apply_to(&status_col),
-                s_price().apply_to(&in_col),
-                s_price().apply_to(&out_col),
-                if p.throughput_tps.unwrap_or(0.0) >= 100.0 { s_warm() } else { s_dim() }.apply_to(&tput_col),
-                if p.supports_tools == Some(true) { s_hot() } else { s_tree() }.apply_to(&tools_col),
-                if p.supports_structured == Some(true) { s_hot() } else { s_tree() }.apply_to(json_col),
-            );
+            table.add_row(vec![
+                Cell::new(&p.name).fg(Color::AnsiValue(109)),
+                Cell::new(format!("{}", p.readiness())).fg(status_color),
+                Cell::new(p.input_price_per_m.map(|v| format!("${:.2}", v)).unwrap_or_else(|| dash.into())).fg(Color::AnsiValue(109)),
+                Cell::new(p.output_price_per_m.map(|v| format!("${:.2}", v)).unwrap_or_else(|| dash.into())).fg(Color::AnsiValue(109)),
+                Cell::new(p.throughput_tps.map(|v| format!("{:.0} t/s", v)).unwrap_or_else(|| dash.into()))
+                    .fg(if p.throughput_tps.unwrap_or(0.0) >= 100.0 { Color::AnsiValue(214) } else { Color::AnsiValue(248) }),
+                Cell::new(if p.supports_tools == Some(true) { check } else { dash })
+                    .fg(if p.supports_tools == Some(true) { Color::AnsiValue(114) } else { Color::AnsiValue(245) }),
+                Cell::new(if p.supports_structured == Some(true) { check } else { dash })
+                    .fg(if p.supports_structured == Some(true) { Color::AnsiValue(114) } else { Color::AnsiValue(245) }),
+            ]);
         }
 
-        println!("{}", sep(64));
+        println!("{table}");
+        println!();
 
-        let mut summary_parts = Vec::new();
-        if let Some(c) = model.cheapest() {
-            let price = match (c.input_price_per_m, c.output_price_per_m) {
-                (Some(i), Some(o)) => format!(
-                    " {}",
-                    s_price().apply_to(format!("(${:.2}/${:.2})", i, o))
-                ),
-                _ => String::new(),
+        let dash = "\u{2500}";
+        let nw = [model.cheapest(), model.fastest()]
+            .iter()
+            .filter_map(|o| o.as_ref())
+            .map(|p| p.name.len())
+            .max()
+            .unwrap_or(8);
+
+        let fmt_summary = |label: &str, p: &ProviderInfo| {
+            let price = match (p.input_price_per_m, p.output_price_per_m) {
+                (Some(i), Some(o)) => format!("${:.2}/${:.2}", i, o),
+                _ => dash.to_string(),
             };
-            summary_parts.push(format!(
-                "{} {}{}",
-                s_dim().apply_to("cheapest:"),
-                s_accent().apply_to(&c.name),
-                price
-            ));
+            let tput = p.throughput_tps
+                .map(|t| format!("{:.0} t/s", t))
+                .unwrap_or_else(|| dash.to_string());
+            println!("  {} {}  {}  {}",
+                s_dim().apply_to(format!("{:<10}", label)),
+                s_accent().apply_to(format!("{:<nw$}", p.name)),
+                s_price().apply_to(format!("{:<14}", price)),
+                s_dim().apply_to(tput),
+            );
+        };
+        if let Some(c) = model.cheapest() {
+            fmt_summary("cheapest:", c);
         }
         if let Some(f) = model.fastest() {
-            let tput = f
-                .throughput_tps
-                .map(|t| format!(" {}", s_warm().apply_to(format!("({:.0} t/s)", t))))
-                .unwrap_or_default();
-            summary_parts.push(format!(
-                "{} {}{}",
-                s_dim().apply_to("fastest:"),
-                s_accent().apply_to(&f.name),
-                tput
-            ));
-        }
-        if !summary_parts.is_empty() {
-            println!("  {}", summary_parts.join("   "));
+            fmt_summary("fastest:", f);
         }
     }
 
@@ -700,7 +750,7 @@ fn print_search_results(query: &str, models: &[Model]) {
     println!(
         "{}",
         s_hint().apply_to(format!(
-            "  {} results   hfp <model-id> for details",
+            "  {} results   hf-providers <model-id> for details",
             models.len()
         ))
     );
@@ -711,53 +761,56 @@ fn print_search_results(query: &str, models: &[Model]) {
 
 #[derive(Clone, PartialEq)]
 enum NK {
-    Provider(String),
-    Lang(String, Lang),
-    Variant(String),
-    VarProv(String, String),
-    VarLang(String, String, Lang),
+    Model(String),                       // model ID
+    Prov(String, String),                // (model_id, provider_name)
+    Lang(String, String, Lang),          // (model_id, provider_name, lang)
     Decor,
 }
 
 struct TreeNode {
     label: String,
+    detail: String,
+    readiness: Option<Readiness>,
     kind: NK,
     code: bool,
+    disabled: bool,
 }
 
 impl TreeNode {
     fn selectable(&self) -> bool {
-        !self.code && self.kind != NK::Decor
+        !self.code && !self.disabled && self.kind != NK::Decor
     }
 }
 
-struct VarProvExp {
+struct ProvExp {
     name: String,
     lang: Option<Lang>,
 }
 
 enum Exp {
     None,
-    Prov { name: String, lang: Option<Lang> },
-    Var { id: String, data: Box<Model>, prov: Option<VarProvExp> },
+    Open {
+        model_id: String,
+        prov: Option<ProvExp>,
+    },
 }
 
-fn prov_summary(p: &ProviderInfo) -> String {
-    let r = match p.readiness() {
+fn prov_detail(p: &ProviderInfo) -> String {
+    let status = match p.readiness() {
         Readiness::Hot => "\u{25cf} hot",
         Readiness::Warm => "\u{25d0} warm",
         Readiness::Cold => "\u{25cb} cold",
         Readiness::Unavailable => "\u{2717} unavail",
     };
     let price = match (p.input_price_per_m, p.output_price_per_m) {
-        (Some(i), Some(o)) => format!("  ${:.2}/${:.2}", i, o),
+        (Some(i), Some(o)) => format!("${:.2}/${:.2}", i, o),
         _ => String::new(),
     };
     let tput = p
         .throughput_tps
-        .map(|t| format!("  {:.0} t/s", t))
+        .map(|t| format!("{:.0} t/s", t))
         .unwrap_or_default();
-    format!("{r}{price}{tput}")
+    format!("{:<10} {:<14} {}", status, price, tput)
 }
 
 fn lang_name(l: Lang) -> &'static str {
@@ -776,35 +829,33 @@ fn add_langs(
     prov: &ProviderInfo,
     exp_lang: &Option<Lang>,
     pad: &str,
-    mk: &dyn Fn(&str, Lang) -> NK,
+    model_id: &str,
 ) {
     for (j, &lang) in LANGS.iter().enumerate() {
         let last = j == 2;
         let conn = if last { "\u{2514}\u{2500}" } else { "\u{251c}\u{2500}" };
         nodes.push(TreeNode {
             label: format!("{pad}{conn} {}", lang_name(lang)),
-            kind: mk(&prov.name, lang),
+            detail: String::new(),
+            readiness: None,
+            kind: NK::Lang(model_id.to_string(), prov.name.clone(), lang),
             code: false,
+            disabled: false,
         });
         if *exp_lang == Some(lang) {
             let code = snippet::generate(mdl, prov, lang);
             let cont = if last { "   " } else { "\u{2502}  " };
             for line in code.lines() {
                 nodes.push(TreeNode {
-                    label: format!("{pad}{cont}{line}"),
+                    label: format!("{pad}{cont}\u{258e} {line}"),
+                    detail: String::new(),
+                    readiness: None,
                     kind: NK::Decor,
                     code: true,
+                    disabled: false,
                 });
             }
         }
-    }
-}
-
-fn trunc(s: &str, max: usize) -> String {
-    if s.len() <= max {
-        s.to_string()
-    } else {
-        format!("{}\u{2026}", &s[..max - 1])
     }
 }
 
@@ -814,75 +865,113 @@ fn sorted_provs(providers: &[ProviderInfo]) -> Vec<&ProviderInfo> {
     v
 }
 
-fn build_tree(model: &Model, variants: &[Model], exp: &Exp) -> Vec<TreeNode> {
+fn model_summary(m: &Model) -> String {
+    let pc = m.providers.len();
+    let pl = if pc == 1 { "1 provider".to_string() } else { format!("{pc} providers") };
+    let mut parts = vec![pl];
+    let mut prices: Vec<f64> = m.providers.iter().filter_map(|p| p.output_price_per_m).collect();
+    prices.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    if let (Some(&lo), Some(&hi)) = (prices.first(), prices.last()) {
+        if (lo - hi).abs() < 0.005 {
+            parts.push(format!("${:.2}", lo));
+        } else {
+            parts.push(format!("${:.2}\u{2013}${:.2}", lo, hi));
+        }
+    }
+    let mut tputs: Vec<f64> = m.providers.iter().filter_map(|p| p.throughput_tps).collect();
+    tputs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    if let (Some(&lo), Some(&hi)) = (tputs.first(), tputs.last()) {
+        if (lo - hi).abs() < 0.5 {
+            parts.push(format!("{:.0} t/s", lo));
+        } else {
+            parts.push(format!("{:.0}\u{2013}{:.0} t/s", lo, hi));
+        }
+    }
+    parts.join("  ")
+}
+
+fn build_tree(model: &Model, variants: &[Model], var_cache: &[(String, Model)], exp: &Exp) -> Vec<TreeNode> {
     let mut nodes = Vec::new();
 
-    nodes.push(TreeNode {
-        label: "\u{2191}\u{2193} navigate  \u{2190}\u{2192} expand/collapse  q quit"
-            .to_string(),
-        kind: NK::Decor,
-        code: false,
-    });
+    // Collect all models (main + variants) for consistent layout.
+    let all_models: Vec<&Model> = std::iter::once(model).chain(variants.iter()).collect();
 
-    for p in &sorted_provs(&model.providers) {
-        let s = prov_summary(p);
-        nodes.push(TreeNode {
-            label: format!("{:<22} {s}", trunc(&p.name, 22)),
-            kind: NK::Provider(p.name.clone()),
-            code: false,
-        });
-        if let Exp::Prov { name, lang } = exp {
-            if name == &p.name {
-                add_langs(&mut nodes, model, p, lang, "  ", &|pn, l| {
-                    NK::Lang(pn.to_string(), l)
-                });
+    // Compute column width from all visible names.
+    let mut max_w: usize = 0;
+    for m in &all_models {
+        let short = m.id.rsplit('/').next().unwrap_or(&m.id);
+        max_w = max_w.max(short.len());
+        if let Exp::Open { model_id, .. } = exp {
+            if model_id == &m.id {
+                // Check cached data for provider names.
+                let data = if m.id == model.id { Some(model) } else {
+                    var_cache.iter().find(|(k, _)| k == &m.id).map(|(_, v)| v)
+                        .or_else(|| variants.iter().find(|v| v.id == m.id))
+                };
+                if let Some(d) = data {
+                    for p in &d.providers {
+                        max_w = max_w.max(p.name.len() + 2);
+                    }
+                }
             }
         }
     }
+    let col = max_w + 2;
 
-    for v in variants.iter().take(8) {
-        let short = v.id.rsplit('/').next().unwrap_or(&v.id);
-        let pc = v.providers.len();
-        let param = Model::param_hint(&v.id).unwrap_or_default();
-        let pl = if pc == 1 {
-            "1 provider".to_string()
-        } else {
-            format!("{pc} providers")
-        };
-        let suf = if param.is_empty() {
-            String::new()
-        } else {
-            format!("  {param}")
-        };
-        let short_t = trunc(short, 22);
+    nodes.push(TreeNode {
+        label: "[\u{2191}\u{2193}] move  [\u{2192}] open  [\u{2190}] close  [\u{23ce}] copy  [q] quit"
+            .to_string(),
+        detail: String::new(),
+        readiness: None,
+        kind: NK::Decor,
+        code: false,
+        disabled: false,
+    });
+
+    for m in &all_models {
+        let short = m.id.rsplit('/').next().unwrap_or(&m.id);
+        let pc = m.providers.len();
         nodes.push(TreeNode {
-            label: format!("{short_t:<22} {pl}{suf}"),
-            kind: NK::Variant(v.id.clone()),
+            label: format!("{short:<col$}"),
+            detail: model_summary(m),
+            readiness: None,
+            kind: NK::Model(m.id.clone()),
             code: false,
+            disabled: pc == 0,
         });
-        if let Exp::Var { id, data, prov } = exp {
-            if id == &v.id {
-                let vps = sorted_provs(&data.providers);
-                if vps.is_empty() {
+
+        // If this model is expanded, show its providers.
+        if let Exp::Open { model_id, prov: ref prov_exp } = exp {
+            if model_id == &m.id {
+                // Prefer cached data (richer), fall back to what we have.
+                let data: &Model = if m.id == model.id { model } else {
+                    var_cache.iter().find(|(k, _)| k == &m.id).map(|(_, v)| v)
+                        .or_else(|| variants.iter().find(|v| v.id == m.id))
+                        .unwrap_or(m)
+                };
+                let provs = sorted_provs(&data.providers);
+                if provs.is_empty() {
                     nodes.push(TreeNode {
                         label: "  (no providers)".to_string(),
+                        detail: String::new(),
+                        readiness: None,
                         kind: NK::Decor,
                         code: false,
+                        disabled: false,
                     });
                 }
-                for vp in &vps {
-                    let vs = prov_summary(vp);
+                for p in &provs {
                     nodes.push(TreeNode {
-                        label: format!("  {:<20} {vs}", trunc(&vp.name, 20)),
-                        kind: NK::VarProv(v.id.clone(), vp.name.clone()),
+                        label: format!("  {:<w$}", p.name, w = col - 2),
+                        detail: prov_detail(p),
+                        readiness: Some(p.readiness()),
+                        kind: NK::Prov(m.id.clone(), p.name.clone()),
                         code: false,
+                        disabled: false,
                     });
-                    if let Some(VarProvExp { name: pn, lang }) = prov {
-                        if pn == &vp.name {
-                            let vid = v.id.clone();
-                            add_langs(&mut nodes, data, vp, lang, "    ", &|pn, l| {
-                                NK::VarLang(vid.clone(), pn.to_string(), l)
-                            });
+                    if let Some(pe) = prov_exp {
+                        if pe.name == p.name {
+                            add_langs(&mut nodes, data, p, &pe.lang, "    ", &m.id);
                         }
                     }
                 }
@@ -895,27 +984,47 @@ fn build_tree(model: &Model, variants: &[Model], exp: &Exp) -> Vec<TreeNode> {
 
 fn node_style(kind: &NK) -> Style {
     match kind {
-        NK::Provider(_) | NK::VarProv(_, _) => Style::new().color256(10),  // bright green
-        NK::Variant(_) => Style::new().color256(14),                        // bright cyan
-        NK::Lang(_, _) | NK::VarLang(_, _, _) => Style::new().color256(15), // bright white
-        NK::Decor => Style::new().color256(8),                              // dark gray
+        NK::Model(_) => Style::new().color256(14),          // bright cyan
+        NK::Prov(_, _) => Style::new().color256(10),        // bright green
+        NK::Lang(_, _, _) => Style::new().color256(15),     // bright white
+        NK::Decor => Style::new().color256(248),            // light gray
+    }
+}
+
+fn readiness_style(r: Readiness) -> Style {
+    match r {
+        Readiness::Hot => Style::new().color256(114),        // green
+        Readiness::Warm => Style::new().color256(214),       // yellow
+        Readiness::Cold => Style::new().color256(208),       // orange
+        Readiness::Unavailable => Style::new().color256(245), // dark gray
     }
 }
 
 fn render_tree(nodes: &[TreeNode], cursor: usize, sel: &[usize]) -> Vec<String> {
     let active = sel.get(cursor).copied().unwrap_or(usize::MAX);
+    let dim = Style::new().color256(242);
     nodes
         .iter()
         .enumerate()
         .map(|(i, n)| {
             let pfx = if i == active { "> " } else { "  " };
-            let text = format!("{pfx}{}", n.label);
-            if i == active {
-                format!("{}", node_style(&n.kind).bold().apply_to(&text))
+            if n.disabled {
+                let text = format!("{pfx}{}{}", n.label, n.detail);
+                format!("{}", dim.apply_to(&text))
             } else if n.code {
-                format!("{}", Style::new().color256(11).apply_to(&text)) // bright yellow
+                format!("{}", Style::new().color256(246).apply_to(format!("{pfx}{}", n.label)))
+            } else if n.detail.is_empty() {
+                let text = format!("{pfx}{}", n.label);
+                let sty = if i == active { node_style(&n.kind).bold() } else { node_style(&n.kind) };
+                format!("{}", sty.apply_to(&text))
             } else {
-                format!("{}", node_style(&n.kind).apply_to(&text))
+                // Name part styled by node kind, detail part styled by readiness.
+                let name_sty = if i == active { node_style(&n.kind).bold() } else { node_style(&n.kind) };
+                let det_sty = match n.readiness {
+                    Some(r) => if i == active { readiness_style(r).bold() } else { readiness_style(r) },
+                    None => if i == active { node_style(&n.kind).bold() } else { node_style(&n.kind) },
+                };
+                format!("{}{}{}", name_sty.apply_to(pfx), name_sty.apply_to(&n.label), det_sty.apply_to(&n.detail))
             }
         })
         .collect()
@@ -940,13 +1049,15 @@ async fn interactive_picker(
     variants: &[Model],
 ) -> anyhow::Result<()> {
     let term = Term::stderr();
-    let mut exp = Exp::None;
+    // Auto-expand main model.
+    let mut exp = Exp::Open { model_id: model.id.clone(), prov: None };
     let mut cursor: usize = 0;
     let mut drawn: usize = 0;
     let mut var_cache: Vec<(String, Model)> = Vec::new();
+    let mut status: Option<String> = None;
 
     loop {
-        let nodes = build_tree(model, variants, &exp);
+        let nodes = build_tree(model, variants, &var_cache, &exp);
         let sel = sel_indices(&nodes);
         if sel.is_empty() {
             break;
@@ -960,7 +1071,14 @@ async fn interactive_picker(
         for line in &lines {
             term.write_line(line)?;
         }
-        drawn = lines.len();
+        if let Some(ref msg) = status {
+            term.write_line("")?;
+            term.write_line(msg)?;
+            drawn = lines.len() + 2;
+            status = None;
+        } else {
+            drawn = lines.len();
+        }
 
         let key = {
             let t = Term::stderr();
@@ -976,135 +1094,68 @@ async fn interactive_picker(
             }
 
             // ── Expand / drill right ─────────────────────────────
-            Key::ArrowRight | Key::Char('l') | Key::Enter => {
+            Key::ArrowRight | Key::Char('l') => {
                 let kind = nodes[sel[cursor]].kind.clone();
                 match kind {
-                    NK::Provider(ref name) => {
-                        let already =
-                            matches!(&exp, Exp::Prov { name: n, .. } if n == name);
+                    NK::Model(ref id) => {
+                        let already = matches!(&exp, Exp::Open { model_id, .. } if model_id == id);
                         if already {
-                            // Move cursor into first lang child
-                            let t = NK::Lang(name.clone(), Lang::Python);
-                            if let Some(p) = find_sel(&nodes, &sel, &t) {
-                                cursor = p;
-                            }
-                        } else {
-                            exp = Exp::Prov {
-                                name: name.clone(),
-                                lang: None,
-                            };
-                            let nn = build_tree(model, variants, &exp);
-                            let ns = sel_indices(&nn);
-                            if let Some(p) = find_sel(&nn, &ns, &kind) {
-                                cursor = p;
-                            }
-                        }
-                    }
-                    NK::Lang(ref pname, lang) => {
-                        if let Exp::Prov {
-                            name: ref en,
-                            lang: ref mut el,
-                        } = exp
-                        {
-                            if en == pname && *el != Some(lang) {
-                                *el = Some(lang);
-                            }
-                        }
-                        let nn = build_tree(model, variants, &exp);
-                        let ns = sel_indices(&nn);
-                        if let Some(p) = find_sel(&nn, &ns, &kind) {
-                            cursor = p;
-                        }
-                    }
-                    NK::Variant(ref id) => {
-                        let already =
-                            matches!(&exp, Exp::Var { id: vid, .. } if vid == id);
-                        if already {
-                            // Move into first child provider
-                            let nn = build_tree(model, variants, &exp);
+                            // Already open — move into first child provider.
+                            let nn = build_tree(model, variants, &var_cache, &exp);
                             let ns = sel_indices(&nn);
                             let pos = ns.iter().position(|&ni| {
-                                matches!(&nn[ni].kind, NK::VarProv(v, _) if v == id)
+                                matches!(&nn[ni].kind, NK::Prov(mid, _) if mid == id)
                             });
                             if let Some(p) = pos {
                                 cursor = p;
                             }
                         } else {
-                            // Fetch or use cache
-                            let cached = var_cache
-                                .iter()
-                                .find(|(k, _)| k == id)
-                                .map(|(_, v)| v.clone());
-                            let data = if let Some(d) = cached {
-                                d
-                            } else {
-                                term.clear_last_lines(drawn)?;
-                                drawn = 0;
-                                term.write_line(&format!(
-                                    "{}",
-                                    s_dim().apply_to("loading...")
-                                ))?;
-                                let raw = match client.model_info(id).await {
-                                    Ok(d) => d,
-                                    Err(e) => {
-                                        term.clear_last_lines(1)?;
-                                        eprintln!(
-                                            "{}",
-                                            s_err().apply_to(format!("error: {e}"))
-                                        );
-                                        continue;
+                            // Need to fetch data for non-main models.
+                            if *id != model.id && !var_cache.iter().any(|(k, _)| k == id) {
+                                // Check if variants already have data.
+                                let has_data = variants.iter().any(|v| v.id == *id && !v.providers.is_empty());
+                                if !has_data {
+                                    term.clear_last_lines(drawn)?;
+                                    drawn = 0;
+                                    term.write_line(&format!("{}", s_dim().apply_to("loading...")))?;
+                                    let short = id.rsplit('/').next().unwrap_or(id);
+                                    let results = match client.search_models(short, 5).await {
+                                        Ok(r) => r,
+                                        Err(e) => {
+                                            term.clear_last_lines(1)?;
+                                            eprintln!("{}", s_err().apply_to(format!("error: {e}")));
+                                            continue;
+                                        }
+                                    };
+                                    term.clear_last_lines(1)?;
+                                    if let Some(m) = results.iter().filter_map(parse_model).find(|m| m.id == *id) {
+                                        var_cache.push((id.clone(), m));
                                     }
-                                };
-                                term.clear_last_lines(1)?;
-                                match parse_model(&raw) {
-                                    Some(m) => {
-                                        var_cache.push((id.clone(), m.clone()));
-                                        m
-                                    }
-                                    None => continue,
                                 }
-                            };
-                            exp = Exp::Var {
-                                id: id.clone(),
-                                data: Box::new(data),
-                                prov: None,
-                            };
-                            let nn = build_tree(model, variants, &exp);
+                            }
+                            exp = Exp::Open { model_id: id.clone(), prov: None };
+                            let nn = build_tree(model, variants, &var_cache, &exp);
                             let ns = sel_indices(&nn);
                             if let Some(p) = find_sel(&nn, &ns, &kind) {
                                 cursor = p;
                             }
                         }
                     }
-                    NK::VarProv(ref vid, ref pname) => {
-                        if let Exp::Var {
-                            id: ref eid,
-                            prov: ref mut ep,
-                            ..
-                        } = exp
-                        {
-                            if eid == vid {
-                                let already = ep
-                                    .as_ref()
-                                    .map(|p| &p.name == pname)
-                                    .unwrap_or(false);
+                    NK::Prov(ref mid, ref pname) => {
+                        if let Exp::Open { ref model_id, prov: ref mut pe } = exp {
+                            if *model_id == *mid {
+                                let already = pe.as_ref().map(|p| &p.name == pname).unwrap_or(false);
                                 if already {
-                                    let t = NK::VarLang(
-                                        vid.clone(),
-                                        pname.clone(),
-                                        Lang::Python,
-                                    );
-                                    let nn = build_tree(model, variants, &exp);
+                                    // Move into first lang child.
+                                    let t = NK::Lang(mid.clone(), pname.clone(), Lang::Python);
+                                    let nn = build_tree(model, variants, &var_cache, &exp);
                                     let ns = sel_indices(&nn);
                                     if let Some(p) = find_sel(&nn, &ns, &t) {
                                         cursor = p;
                                     }
                                 } else {
-                                    *ep = Some(VarProvExp {
-                                        name: pname.clone(),
-                                        lang: None,
-                                    });
-                                    let nn = build_tree(model, variants, &exp);
+                                    *pe = Some(ProvExp { name: pname.clone(), lang: None });
+                                    let nn = build_tree(model, variants, &var_cache, &exp);
                                     let ns = sel_indices(&nn);
                                     if let Some(p) = find_sel(&nn, &ns, &kind) {
                                         cursor = p;
@@ -1113,18 +1164,13 @@ async fn interactive_picker(
                             }
                         }
                     }
-                    NK::VarLang(ref vid, ref pname, lang) => {
-                        if let Exp::Var {
-                            id: ref eid,
-                            prov: Some(ref mut pe),
-                            ..
-                        } = exp
-                        {
-                            if eid == vid && &pe.name == pname && pe.lang != Some(lang) {
+                    NK::Lang(ref mid, ref pname, lang) => {
+                        if let Exp::Open { ref model_id, prov: Some(ref mut pe) } = exp {
+                            if *model_id == *mid && &pe.name == pname && pe.lang != Some(lang) {
                                 pe.lang = Some(lang);
                             }
                         }
-                        let nn = build_tree(model, variants, &exp);
+                        let nn = build_tree(model, variants, &var_cache, &exp);
                         let ns = sel_indices(&nn);
                         if let Some(p) = find_sel(&nn, &ns, &kind) {
                             cursor = p;
@@ -1140,55 +1186,22 @@ async fn interactive_picker(
                 let mut need_rebuild = false;
 
                 match kind {
-                    NK::Provider(ref name) => {
-                        if matches!(&exp, Exp::Prov { name: n, .. } if n == name) {
+                    NK::Model(ref id) => {
+                        if matches!(&exp, Exp::Open { model_id, .. } if model_id == id) {
                             exp = Exp::None;
                             need_rebuild = true;
                         }
                     }
-                    NK::Lang(ref pname, this_lang) => {
-                        if let Exp::Prov {
-                            name: ref en,
-                            lang: ref mut el,
-                        } = exp
-                        {
-                            if en == pname {
-                                if *el == Some(this_lang) {
-                                    *el = None;
-                                    need_rebuild = true;
-                                } else {
-                                    // Go to parent provider
-                                    let t = NK::Provider(pname.clone());
-                                    if let Some(p) = find_sel(&nodes, &sel, &t) {
-                                        cursor = p;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    NK::Variant(ref id) => {
-                        if matches!(&exp, Exp::Var { id: vid, .. } if vid == id) {
-                            exp = Exp::None;
-                            need_rebuild = true;
-                        }
-                    }
-                    NK::VarProv(ref vid, ref pname) => {
-                        if let Exp::Var {
-                            id: ref eid,
-                            prov: ref mut ep,
-                            ..
-                        } = exp
-                        {
-                            if eid == vid {
-                                let this_exp = ep
-                                    .as_ref()
-                                    .map(|p| &p.name == pname)
-                                    .unwrap_or(false);
+                    NK::Prov(ref mid, ref pname) => {
+                        if let Exp::Open { ref model_id, ref mut prov } = exp {
+                            if model_id == mid {
+                                let this_exp = prov.as_ref().map(|p| &p.name == pname).unwrap_or(false);
                                 if this_exp {
-                                    *ep = None;
+                                    *prov = None;
                                     need_rebuild = true;
                                 } else {
-                                    let t = NK::Variant(vid.clone());
+                                    // Go to parent model.
+                                    let t = NK::Model(mid.clone());
                                     if let Some(p) = find_sel(&nodes, &sel, &t) {
                                         cursor = p;
                                     }
@@ -1196,20 +1209,14 @@ async fn interactive_picker(
                             }
                         }
                     }
-                    NK::VarLang(ref vid, ref pname, this_lang) => {
-                        if let Exp::Var {
-                            id: ref eid,
-                            prov: Some(ref mut pe),
-                            ..
-                        } = exp
-                        {
-                            if eid == vid && &pe.name == pname {
+                    NK::Lang(ref mid, ref pname, this_lang) => {
+                        if let Exp::Open { ref model_id, prov: Some(ref mut pe) } = exp {
+                            if model_id == mid && &pe.name == pname {
                                 if pe.lang == Some(this_lang) {
                                     pe.lang = None;
                                     need_rebuild = true;
                                 } else {
-                                    let t =
-                                        NK::VarProv(vid.clone(), pname.clone());
+                                    let t = NK::Prov(mid.clone(), pname.clone());
                                     if let Some(p) = find_sel(&nodes, &sel, &t) {
                                         cursor = p;
                                     }
@@ -1221,7 +1228,7 @@ async fn interactive_picker(
                 }
 
                 if need_rebuild {
-                    let nn = build_tree(model, variants, &exp);
+                    let nn = build_tree(model, variants, &var_cache, &exp);
                     let ns = sel_indices(&nn);
                     if let Some(p) = find_sel(&nn, &ns, &kind) {
                         cursor = p;
@@ -1231,11 +1238,54 @@ async fn interactive_picker(
                 }
             }
 
+            Key::Char('c') | Key::Enter => {
+                // Collect visible code lines and copy to clipboard.
+                let code: String = nodes
+                    .iter()
+                    .filter(|n| n.code)
+                    .map(|n| n.label.trim().to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                if !code.is_empty() {
+                    if let Ok(mut child) = std::process::Command::new("pbcopy")
+                        .stdin(std::process::Stdio::piped())
+                        .spawn()
+                    {
+                        if let Some(ref mut stdin) = child.stdin {
+                            let _ = stdin.write_all(code.as_bytes());
+                        }
+                        let _ = child.wait();
+                        let what = match &exp {
+                            Exp::Open { model_id, prov: Some(pe) } if pe.lang.is_some() =>
+                                format!("{}:{} ({})", model_id, pe.name, lang_name(pe.lang.unwrap())),
+                            _ => "code".to_string(),
+                        };
+                        status = Some(format!(
+                            "  {}",
+                            Style::new().color256(114).apply_to(
+                                format!("\u{2500}\u{2500} \u{2713} copied {} \u{2500}\u{2500}", what)
+                            )
+                        ));
+                    }
+                }
+            }
+
             Key::Escape | Key::Char('q') | Key::Char('\u{3}') => {
                 term.clear_last_lines(drawn)?;
                 break;
             }
             _ => {}
+        }
+
+        // Auto-expand code when cursor lands on a Lang node.
+        if cursor < sel.len() {
+            if let NK::Lang(ref mid, ref pname, lang) = nodes[sel[cursor]].kind {
+                if let Exp::Open { ref model_id, prov: Some(ref mut pe) } = exp {
+                    if model_id == mid && &pe.name == pname && pe.lang != Some(lang) {
+                        pe.lang = Some(lang);
+                    }
+                }
+            }
         }
     }
 

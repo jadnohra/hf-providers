@@ -85,6 +85,27 @@ impl HfClient {
         Ok(resp.json().await?)
     }
 
+    /// Fetch top models by trending score (with provider data).
+    pub async fn trending_models(&self, limit: u32) -> Result<Vec<Value>> {
+        let url = format!(
+            "{HF_API}/models?sort=trendingScore&direction=-1&limit={limit}\
+             &expand[]=inferenceProviderMapping&expand[]=inference\
+             &expand[]=likes&expand[]=downloads&expand[]=pipeline_tag\
+             &expand[]=library_name&expand[]=tags"
+        );
+        let mut req = self.http.get(&url);
+        if let Some(auth) = self.auth_header() {
+            req = req.header("Authorization", auth);
+        }
+        let resp = req.send().await?;
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(HfpError::Api { status, body });
+        }
+        Ok(resp.json().await?)
+    }
+
     /// List models served by a specific provider.
     pub async fn models_by_provider(
         &self,
