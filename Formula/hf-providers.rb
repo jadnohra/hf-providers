@@ -1,24 +1,24 @@
 class HfProviders < Formula
   desc "Real-time inference provider comparison for Hugging Face models"
   homepage "https://github.com/jadnohra/hf-providers"
-  version "0.1.0"
+  version "0.1.1"
   license any_of: ["MIT", "Apache-2.0"]
 
   on_macos do
     on_arm do
       url "https://github.com/jadnohra/hf-providers/releases/download/v#{version}/hf-providers-aarch64-apple-darwin.tar.gz"
-      sha256 "dd5e72869321c69bd4f8c991e071eb20bf6e1785c20ce4a71f452c687b11d864"
+      sha256 "9405eb2d02b80cfc939caa9facc5077be7685cf47ffff233a31902d8a9355f66"
     end
     on_intel do
       url "https://github.com/jadnohra/hf-providers/releases/download/v#{version}/hf-providers-x86_64-apple-darwin.tar.gz"
-      sha256 "b82832b18ec609cdd5394aa26b3c85913dd330a173fe0818a4a392737796513d"
+      sha256 "614c229b635acb5cfd9d20156dde9f0b294ce82362606c096dbfe992bf52449b"
     end
   end
 
   on_linux do
     on_intel do
       url "https://github.com/jadnohra/hf-providers/releases/download/v#{version}/hf-providers-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "c5f5d53975e2026995607bf120789ff437dd13aa34f3a86bafe0b93df5f3f55e"
+      sha256 "768582291e06f309b22b2abec080eb439e60380bc8ed8cab93b89102842c004c"
     end
   end
 
