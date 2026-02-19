@@ -14,6 +14,7 @@ pub struct Model {
     pub tags: Vec<String>,
     pub library_name: Option<String>,
     pub license: Option<String>,
+    pub safetensors_params: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,6 +63,50 @@ impl Model {
             .iter()
             .filter(|p| p.supports_tools == Some(true))
             .collect()
+    }
+
+    /// Format a raw parameter count as "70.6B", "8.0B", "671M", etc.
+    pub fn fmt_params(n: u64) -> String {
+        let f = n as f64;
+        if f >= 1e9 {
+            let b = f / 1e9;
+            if b >= 100.0 {
+                format!("{:.0}B", b)
+            } else {
+                format!("{:.1}B", b)
+            }
+        } else if f >= 1e6 {
+            format!("{:.0}M", f / 1e6)
+        } else {
+            format!("{:.0}K", f / 1e3)
+        }
+    }
+
+    /// Weight size in GB for a given bytes-per-param ratio.
+    /// Common ratios: FP16 = 2.0, Q8 = 1.0, Q4 = 0.5
+    pub fn weight_gb(params: u64, bytes_per_param: f64) -> f64 {
+        params as f64 * bytes_per_param / 1e9
+    }
+
+    /// Parse a param hint string like "70B" or "1.5B" into a raw param count.
+    pub fn parse_param_hint(hint: &str) -> Option<u64> {
+        let hint = hint.trim().to_uppercase();
+        if let Some(b) = hint.strip_suffix('B') {
+            let val: f64 = b.parse().ok()?;
+            Some((val * 1e9) as u64)
+        } else if let Some(m) = hint.strip_suffix('M') {
+            let val: f64 = m.parse().ok()?;
+            Some((val * 1e6) as u64)
+        } else {
+            None
+        }
+    }
+
+    /// Get estimated param count: prefer safetensors, fall back to name hint.
+    pub fn estimated_params(&self) -> Option<u64> {
+        self.safetensors_params.or_else(|| {
+            Self::param_hint(&self.id).and_then(|h| Self::parse_param_hint(&h))
+        })
     }
 
     /// Extract a likely param size from model name, e.g. "70B", "1.5B".

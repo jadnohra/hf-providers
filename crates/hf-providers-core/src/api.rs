@@ -47,7 +47,8 @@ impl HfClient {
             "{HF_API}/models/{model_id}?\
              expand[]=inferenceProviderMapping&expand[]=inference\
              &expand[]=tags&expand[]=cardData&expand[]=library_name\
-             &expand[]=likes&expand[]=downloads&expand[]=pipeline_tag"
+             &expand[]=likes&expand[]=downloads&expand[]=pipeline_tag\
+             &expand[]=safetensors"
         );
         let mut req = self.http.get(&url);
         if let Some(auth) = self.auth_header() {
@@ -69,7 +70,8 @@ impl HfClient {
     pub async fn search_models(&self, query: &str, limit: u32) -> Result<Vec<Value>> {
         let url = format!(
             "{HF_API}/models?search={}&limit={limit}\
-             &expand[]=inferenceProviderMapping&sort=likes&direction=-1",
+             &expand[]=inferenceProviderMapping&expand[]=safetensors\
+             &sort=likes&direction=-1",
             urlencoding::encode(query),
         );
         let mut req = self.http.get(&url);
@@ -91,7 +93,7 @@ impl HfClient {
             "{HF_API}/models?sort=trendingScore&direction=-1&limit={limit}\
              &expand[]=inferenceProviderMapping&expand[]=inference\
              &expand[]=likes&expand[]=downloads&expand[]=pipeline_tag\
-             &expand[]=library_name&expand[]=tags"
+             &expand[]=library_name&expand[]=tags&expand[]=safetensors"
         );
         let mut req = self.http.get(&url);
         if let Some(auth) = self.auth_header() {
@@ -264,6 +266,11 @@ pub fn parse_model(data: &Value) -> Option<Model> {
                 .map(|t| t.strip_prefix("license:").unwrap().to_string())
         });
 
+    let safetensors_params = data
+        .get("safetensors")
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.as_u64());
+
     Some(Model {
         id,
         pipeline_tag,
@@ -275,5 +282,6 @@ pub fn parse_model(data: &Value) -> Option<Model> {
         tags,
         library_name,
         license,
+        safetensors_params,
     })
 }

@@ -1,5 +1,7 @@
 pub mod api;
 pub mod error;
+pub mod estimate;
+pub mod hardware;
 pub mod model;
 pub mod pricing;
 pub mod provider;

@@ -97,6 +97,46 @@ fn parse_empty_provider_array() {
 }
 
 #[test]
+fn parse_providers_from_object() {
+    // Detail endpoint returns inferenceProviderMapping as an object keyed by provider name.
+    let data = json!({
+        "id": "meta-llama/Llama-3.3-70B-Instruct",
+        "pipeline_tag": "text-generation",
+        "inferenceProviderMapping": {
+            "groq": {
+                "status": "live",
+                "providerId": "llama-3.3-70b-versatile",
+                "task": "conversational"
+            },
+            "sambanova": {
+                "status": "live",
+                "providerId": "Meta-Llama-3.3-70B-Instruct",
+                "task": "conversational"
+            },
+            "fireworks-ai": {
+                "status": "staging",
+                "providerId": "accounts/fireworks/models/llama-v3p3-70b-instruct",
+                "task": "conversational"
+            }
+        }
+    });
+
+    let model = parse_model(&data).expect("should parse");
+    assert_eq!(model.providers.len(), 3);
+
+    let groq = model.providers.iter().find(|p| p.name == "groq").unwrap();
+    assert_eq!(groq.status, hf_providers_core::ProviderStatus::Live);
+    assert_eq!(groq.provider_id, "llama-3.3-70b-versatile");
+    // Object format has no pricing/perf data
+    assert!(groq.input_price_per_m.is_none());
+    assert!(groq.throughput_tps.is_none());
+    assert!(groq.supports_tools.is_none());
+
+    let fireworks = model.providers.iter().find(|p| p.name == "fireworks-ai").unwrap();
+    assert_eq!(fireworks.status, hf_providers_core::ProviderStatus::Staging);
+}
+
+#[test]
 fn parse_provider_entry_missing_provider_field_skipped() {
     let data = json!({
         "id": "org/model",

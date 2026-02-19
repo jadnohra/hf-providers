@@ -27,6 +27,7 @@ fn test_model() -> (Model, ProviderInfo) {
         tags: Vec::new(),
         library_name: None,
         license: None,
+        safetensors_params: None,
     };
     let prov = model.providers[0].clone();
     (model, prov)

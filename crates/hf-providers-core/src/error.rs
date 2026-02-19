@@ -15,6 +15,9 @@ pub enum HfpError {
     #[error("no HF token found — set $HF_TOKEN or run `huggingface-cli login`")]
     NoToken,
 
+    #[error("IO error: {0}")]
+    Io(String),
+
     #[error("{0}")]
     Other(String),
 }

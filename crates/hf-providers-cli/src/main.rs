@@ -6,6 +6,8 @@ use comfy_table::{presets, Cell, Color, ContentArrangement, Table};
 use console::{Key, Style, Term};
 use hf_providers_core::{
     api::{parse_model, HfClient},
+    estimate::{self, Fit},
+    hardware,
     model::Model,
     provider::{ProviderInfo, ProviderKind, Readiness, PROVIDERS},
     snippet::{self, Lang},
@@ -251,7 +253,24 @@ async fn cmd_search(client: &HfClient, query: &str, opts: &Cli) -> anyhow::Resul
         Err(_) => None,
     };
 
-    let model = if let Some(m) = model {
+    let model = if let Some(mut m) = model {
+        // Detail endpoint returns providers without pricing/perf data.
+        // If we have providers but none have pricing, enrich from search.
+        let needs_enrichment = !m.providers.is_empty()
+            && m.providers.iter().all(|p| p.input_price_per_m.is_none() && p.throughput_tps.is_none());
+        if needs_enrichment {
+            // Search by model name only (not org/name) since the search API
+            // does free-text matching and "org/name" may match the wrong model.
+            let search_term = m.id.split('/').next_back().unwrap_or(&m.id);
+            if let Ok(results) = client.search_models(search_term, 5).await {
+                if let Some(rich) = results.iter().find_map(|r| {
+                    let parsed = parse_model(r)?;
+                    (parsed.id == m.id).then_some(parsed)
+                }) {
+                    m.providers = rich.providers;
+                }
+            }
+        }
         term.clear_last_lines(1)?;
         m
     } else {
@@ -604,6 +623,30 @@ fn print_model_full(model: &Model, _variants: &[Model], opts: &Cli) {
         s_dim().apply_to(inf)
     );
 
+    if let Some(params) = model.safetensors_params {
+        let dot = s_tree().apply_to("\u{00b7}");
+        let q4 = Model::weight_gb(params, 0.5);
+        let q8 = Model::weight_gb(params, 1.0);
+        let fp16 = Model::weight_gb(params, 2.0);
+        let fmt_gb = |gb: f64| -> String {
+            if gb >= 1000.0 {
+                format!("{:.1} TB", gb / 1000.0)
+            } else {
+                format!("{:.0} GB", gb)
+            }
+        };
+        println!(
+            "{}  {}  Q4: {}  {}  Q8: {}  {}  FP16: {}",
+            s_param().apply_to(Model::fmt_params(params)),
+            dot,
+            s_dim().apply_to(format!("~{}", fmt_gb(q4))),
+            dot,
+            s_dim().apply_to(format!("~{}", fmt_gb(q8))),
+            dot,
+            s_dim().apply_to(format!("~{}", fmt_gb(fp16))),
+        );
+    }
+
     // ── Serverless providers ──
 
     let mut providers: Vec<&ProviderInfo> = model.providers.iter().collect();
@@ -710,6 +753,77 @@ fn print_model_full(model: &Model, _variants: &[Model], opts: &Cli) {
         }
         if let Some(f) = model.fastest() {
             fmt_summary("fastest:", f);
+        }
+    }
+
+    // ── Local estimates ──
+
+    if let Some(params) = model.estimated_params() {
+        if let Ok(gpus) = hardware::load_bundled_hardware() {
+            let mut rows: Vec<(String, String, estimate::Estimate)> = Vec::new();
+            for (key, gpu) in &gpus {
+                if !hardware::DEFAULT_DISPLAY_GPUS.contains(&key.as_str()) {
+                    continue;
+                }
+                if let Some((q, mut est)) = estimate::best_quant(gpu, params) {
+                    est.gpu_key = key.clone();
+                    rows.push((key.clone(), q.label().to_string(), est));
+                }
+            }
+            if !rows.is_empty() {
+                println!();
+                println!("{}", s_header().apply_to("local estimates"));
+                let mut table = Table::new();
+                table.load_preset(presets::NOTHING);
+                table.set_content_arrangement(ContentArrangement::Dynamic);
+                table.set_header(vec![
+                    Cell::new(" GPU").fg(Color::AnsiValue(243)),
+                    Cell::new("Quant").fg(Color::AnsiValue(243)),
+                    Cell::new("Weight").fg(Color::AnsiValue(243)),
+                    Cell::new("Fit").fg(Color::AnsiValue(243)),
+                    Cell::new("Decode").fg(Color::AnsiValue(243)),
+                    Cell::new("Prefill").fg(Color::AnsiValue(243)),
+                ]);
+
+                for (_, _, est) in &rows {
+                    let fit_str = match &est.fit {
+                        Fit::Full => "fits".to_string(),
+                        Fit::Offload { gpu_frac } =>
+                            format!("offload ({:.0}% gpu)", gpu_frac * 100.0),
+                        Fit::NoFit => "no fit".to_string(),
+                    };
+                    let fit_color = match &est.fit {
+                        Fit::Full => Color::AnsiValue(114),
+                        Fit::Offload { .. } => Color::AnsiValue(214),
+                        Fit::NoFit => Color::AnsiValue(245),
+                    };
+                    let dash = "\u{2500}";
+                    let fmt_toks = |v: Option<f64>| -> String {
+                        match v {
+                            Some(t) if t >= 1000.0 => format!("{:.1}k t/s", t / 1000.0),
+                            Some(t) => format!("{:.0} t/s", t),
+                            None => dash.to_string(),
+                        }
+                    };
+                    let decode_color = match est.decode_tok_s {
+                        Some(t) if t >= 30.0 => Color::AnsiValue(114),
+                        Some(t) if t >= 10.0 => Color::AnsiValue(214),
+                        Some(_) => Color::AnsiValue(208),
+                        None => Color::AnsiValue(245),
+                    };
+
+                    table.add_row(vec![
+                        Cell::new(&est.gpu_name).fg(Color::AnsiValue(109)),
+                        Cell::new(est.quant.label()).fg(Color::AnsiValue(248)),
+                        Cell::new(format!("{:.0} GB", est.weight_gb)).fg(Color::AnsiValue(248)),
+                        Cell::new(&fit_str).fg(fit_color),
+                        Cell::new(fmt_toks(est.decode_tok_s)).fg(decode_color),
+                        Cell::new(fmt_toks(est.prefill_tok_s)).fg(Color::AnsiValue(248)),
+                    ]);
+                }
+
+                println!("{table}");
+            }
         }
     }
 
