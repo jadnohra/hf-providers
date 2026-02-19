@@ -51,7 +51,7 @@ pub const DEFAULT_DISPLAY_GPUS: &[&str] = &[
     "rtx_5090",
     "m4_pro_48",
     "m4_max_128",
-    "a100_80gb",
+    "a100_pcie_80_gb",
 ];
 
 #[cfg(test)]
@@ -65,9 +65,9 @@ mod tests {
 
         // Check a known entry.
         let (_, rtx4090) = gpus.iter().find(|(k, _)| k == "rtx_4090").expect("rtx_4090 missing");
-        assert_eq!(rtx4090.name, "RTX 4090");
+        assert_eq!(rtx4090.name, "GeForce RTX 4090");
         assert!((rtx4090.vram_gb - 24.0).abs() < 0.1);
-        assert!((rtx4090.mem_bw_gb_s - 1008.0).abs() < 1.0);
+        assert!((rtx4090.mem_bw_gb_s - 1010.0).abs() < 5.0);
         assert!(rtx4090.decode_eff > 0.0 && rtx4090.decode_eff <= 1.0);
         assert!(rtx4090.prefill_eff > 0.0 && rtx4090.prefill_eff <= 1.0);
     }

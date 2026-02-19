@@ -227,7 +227,7 @@ mod tests {
     #[test]
     fn more_compute_faster_prefill() {
         let params = 8_000_000_000u64;
-        let est_h100 = estimate(&gpu("h100_sxm"), params, Quant::Q4);
+        let est_h100 = estimate(&gpu("h100_sxm5_80_gb"), params, Quant::Q4);
         let est_4090 = estimate(&gpu("rtx_4090"), params, Quant::Q4);
         assert!(
             est_h100.prefill_tok_s.unwrap() > est_4090.prefill_tok_s.unwrap(),
