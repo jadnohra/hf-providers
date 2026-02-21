@@ -7,9 +7,10 @@ use console::{Key, Style, Term};
 use hf_providers_core::{
     api::{parse_model, HfClient},
     estimate::{self, Fit},
-    hardware,
+    hardware::{self, Runtime},
     model::Model,
     provider::{ProviderInfo, ProviderKind, Readiness, PROVIDERS},
+    reference::REFERENCE_MODELS,
     snippet::{self, Lang},
 };
 
@@ -69,6 +70,7 @@ fn fmt_count(n: u64) -> String {
         hf-providers deepseek-r1 --cheapest\n  \
         hf-providers providers groq\n  \
         hf-providers snippet deepseek-r1\n  \
+        hf-providers machine rtx4090            (what can this GPU run?)\n  \
         hf-providers                             (trending models)"
 )]
 struct Cli {
@@ -119,6 +121,13 @@ enum Commands {
         #[arg(long, short)]
         watch: Option<u64>,
     },
+    /// What can this GPU run?
+    Machine {
+        /// GPU key, e.g. rtx4090, 4090, m4-max-128, h100
+        gpu: String,
+        /// Optional model to evaluate, e.g. deepseek-r1 or meta-llama/Llama-3.3-70B-Instruct
+        model: Option<String>,
+    },
 }
 
 #[tokio::main]
@@ -141,6 +150,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Some(Commands::Status { model, watch }) => {
             cmd_status(&client, &model, watch).await?;
+        }
+        Some(Commands::Machine { gpu, model }) => {
+            cmd_machine(&client, &gpu, model.as_deref()).await?;
         }
         None => {
             if let Some(ref raw) = cli.query {
@@ -569,6 +581,282 @@ async fn cmd_status(
     Ok(())
 }
 
+// ── Machine ──────────────────────────────────────────────────────────
+
+async fn cmd_machine(client: &HfClient, input: &str, model_query: Option<&str>) -> anyhow::Result<()> {
+    let gpus = hardware::load_bundled_hardware()?;
+    let (key, gpu) = hardware::find_gpu(&gpus, input)
+        .ok_or_else(|| anyhow::anyhow!("no GPU matching '{input}' in hardware database"))?;
+
+    // GPU header.
+    let vendor_prefix = match gpu.vendor.as_str() {
+        "nvidia" => "NVIDIA ",
+        "amd" => "AMD ",
+        "intel" => "Intel ",
+        _ => "",
+    };
+    println!();
+    println!(
+        "  {}",
+        s_header().apply_to(format!("{vendor_prefix}{}", gpu.name))
+    );
+
+    let dot = s_tree().apply_to("\u{00b7}");
+    let specs = [
+        format!("{:.0} GB", gpu.vram_gb),
+        format!("{:.0} GB/s", gpu.mem_bw_gb_s),
+        format!("{:.1} FP16 TFLOPS", gpu.fp16_tflops),
+        format!("{}W TDP", gpu.tdp_w),
+    ];
+    println!(
+        "  {}",
+        s_dim().apply_to(
+            specs
+                .iter()
+                .map(|s| s.as_str())
+                .collect::<Vec<_>>()
+                .join(&format!("  {}  ", dot))
+        )
+    );
+
+    // Cost line: street price + electricity estimate.
+    let mut cost_parts: Vec<String> = Vec::new();
+    if let Some(usd) = gpu.street_usd {
+        cost_parts.push(format!("street: ~${usd}"));
+    }
+    let elec_mo = gpu.tdp_w as f64 * 0.80 * 730.0 / 1000.0 * 0.12;
+    cost_parts.push(format!("elec: ~${:.0}/mo", elec_mo));
+    println!(
+        "  {}",
+        s_price().apply_to(
+            cost_parts.join(&format!("  {}  ", dot))
+        )
+    );
+
+    // Build list of (short_name, params) to evaluate.
+    struct ModelEntry {
+        short: String,
+        params: u64,
+    }
+
+    let entries: Vec<ModelEntry> = if let Some(query) = model_query {
+        let term = Term::stderr();
+        term.write_line(&format!("{}", s_dim().apply_to("resolving model...")))?;
+
+        let model = match client.model_info(query).await {
+            Ok(data) => parse_model(&data),
+            Err(_) => {
+                let results = client.search_models(query, 5).await?;
+                results.iter().find_map(parse_model)
+            }
+        };
+        term.clear_last_lines(1)?;
+
+        let model = model.ok_or_else(|| anyhow::anyhow!("model not found: {query}"))?;
+        let params = model.estimated_params()
+            .or_else(|| {
+                REFERENCE_MODELS.iter()
+                    .find(|rm| rm.id == model.id)
+                    .map(|rm| rm.params)
+            })
+            .ok_or_else(|| anyhow::anyhow!("cannot determine param count for {}\n  \
+                try: hf-providers machine {} org/Model-70B-Instruct", model.id, input))?;
+        let short = model.id.rsplit('/').next().unwrap_or(&model.id);
+        vec![ModelEntry { short: short.to_string(), params }]
+    } else {
+        REFERENCE_MODELS.iter()
+            .map(|rm| ModelEntry { short: rm.short.to_string(), params: rm.params })
+            .collect()
+    };
+
+    let runtimes = gpu.available_runtimes();
+    let multi_rt = runtimes.len() > 1;
+
+    let fmt_toks = |v: Option<f64>| -> String {
+        let dash = "\u{2500}";
+        match v {
+            Some(t) if t >= 1000.0 => format!("{:.1}k t/s", t / 1000.0),
+            Some(t) if t >= 1.0 => format!("{:.0} t/s", t),
+            Some(t) if t > 0.0 => "<1 t/s".to_string(),
+            Some(_) => dash.to_string(),
+            None => dash.to_string(),
+        }
+    };
+
+    let decode_color = |v: Option<f64>| -> Color {
+        match v {
+            Some(t) if t >= 30.0 => Color::AnsiValue(114),
+            Some(t) if t >= 10.0 => Color::AnsiValue(214),
+            Some(_) => Color::AnsiValue(208),
+            None => Color::AnsiValue(245),
+        }
+    };
+
+    // Single model mode: show per-runtime rows in one table.
+    if model_query.is_some() {
+        println!();
+        println!(
+            "  {}  {}",
+            s_bold().apply_to(&entries[0].short),
+            s_param().apply_to(Model::fmt_params(entries[0].params)),
+        );
+
+        let mut table = Table::new();
+        table.load_preset(presets::NOTHING);
+        table.set_content_arrangement(ContentArrangement::Dynamic);
+        let mut header = vec![
+            Cell::new("  Quant").fg(Color::AnsiValue(243)),
+            Cell::new("Weight").fg(Color::AnsiValue(243)),
+            Cell::new("Fit").fg(Color::AnsiValue(243)),
+            Cell::new("Decode").fg(Color::AnsiValue(243)),
+            Cell::new("Prefill").fg(Color::AnsiValue(243)),
+        ];
+        if multi_rt {
+            header.insert(0, Cell::new("  Runtime").fg(Color::AnsiValue(243)));
+        }
+        table.set_header(header);
+
+        let mut has_rows = false;
+        for &rt in &runtimes {
+            if let Some((q, est)) = estimate::best_quant(&gpu, entries[0].params, rt) {
+                let fit_str = match &est.fit {
+                    Fit::Full => "fits in VRAM".to_string(),
+                    Fit::NoFit => "does not fit".to_string(),
+                };
+                let fit_c = match &est.fit {
+                    Fit::Full => Color::AnsiValue(114),
+                    Fit::NoFit => Color::AnsiValue(167),
+                };
+                let mut row = vec![
+                    Cell::new(format!("  {}", q.label())).fg(Color::AnsiValue(248)),
+                    Cell::new(format!("{:.0} GB", est.weight_gb)).fg(Color::AnsiValue(248)),
+                    Cell::new(&fit_str).fg(fit_c),
+                    Cell::new(fmt_toks(est.decode_tok_s)).fg(decode_color(est.decode_tok_s)),
+                    Cell::new(fmt_toks(est.prefill_tok_s)).fg(Color::AnsiValue(248)),
+                ];
+                if multi_rt {
+                    row.insert(0, Cell::new(format!("  {rt}")).fg(Color::AnsiValue(109)));
+                }
+                table.add_row(row);
+                has_rows = true;
+            }
+        }
+
+        if has_rows {
+            println!("{table}");
+        } else {
+            println!("  {}", s_err().apply_to("does not fit, even at Q4"));
+        }
+    } else {
+        // Reference model list: show categories per runtime.
+        for &rt in &runtimes {
+            let rt_suffix = if multi_rt { format!(" ({})", rt) } else { String::new() };
+
+            struct EvalRow {
+                short: String,
+                quant: String,
+                decode: Option<f64>,
+                prefill: Option<f64>,
+            }
+
+            let mut comfortable: Vec<EvalRow> = Vec::new();
+            let mut tight: Vec<EvalRow> = Vec::new();
+            let mut wont_run: Vec<String> = Vec::new();
+
+            for entry in &entries {
+                match estimate::best_quant(&gpu, entry.params, rt) {
+                    Some((q, est)) => {
+                        let is_full = est.fit == Fit::Full;
+                        let fast_decode = est.decode_tok_s.map(|d| d >= 30.0).unwrap_or(false);
+                        let row = EvalRow {
+                            short: entry.short.clone(),
+                            quant: q.label().to_string(),
+                            decode: est.decode_tok_s,
+                            prefill: est.prefill_tok_s,
+                        };
+                        if is_full && fast_decode {
+                            comfortable.push(row);
+                        } else {
+                            tight.push(row);
+                        }
+                    }
+                    None => {
+                        wont_run.push(entry.short.clone());
+                    }
+                }
+            }
+
+            if !comfortable.is_empty() {
+                println!();
+                println!("{}", s_hot().apply_to(format!("  comfortable{rt_suffix}")));
+
+                let mut table = Table::new();
+                table.load_preset(presets::NOTHING);
+                table.set_content_arrangement(ContentArrangement::Dynamic);
+                table.set_header(vec![
+                    Cell::new("  Model").fg(Color::AnsiValue(243)),
+                    Cell::new("Quant").fg(Color::AnsiValue(243)),
+                    Cell::new("Decode").fg(Color::AnsiValue(243)),
+                    Cell::new("Prefill").fg(Color::AnsiValue(243)),
+                ]);
+
+                for r in &comfortable {
+                    table.add_row(vec![
+                        Cell::new(format!("  {}", r.short)).fg(Color::AnsiValue(252)),
+                        Cell::new(&r.quant).fg(Color::AnsiValue(248)),
+                        Cell::new(fmt_toks(r.decode)).fg(decode_color(r.decode)),
+                        Cell::new(fmt_toks(r.prefill)).fg(Color::AnsiValue(248)),
+                    ]);
+                }
+                println!("{table}");
+            }
+
+            if !tight.is_empty() {
+                println!();
+                println!("{}", s_warm().apply_to(format!("  tight{rt_suffix}")));
+
+                let mut table = Table::new();
+                table.load_preset(presets::NOTHING);
+                table.set_content_arrangement(ContentArrangement::Dynamic);
+                table.set_header(vec![
+                    Cell::new("  Model").fg(Color::AnsiValue(243)),
+                    Cell::new("Quant").fg(Color::AnsiValue(243)),
+                    Cell::new("Decode").fg(Color::AnsiValue(243)),
+                    Cell::new("Prefill").fg(Color::AnsiValue(243)),
+                ]);
+
+                for r in &tight {
+                    table.add_row(vec![
+                        Cell::new(format!("  {}", r.short)).fg(Color::AnsiValue(252)),
+                        Cell::new(&r.quant).fg(Color::AnsiValue(248)),
+                        Cell::new(fmt_toks(r.decode)).fg(decode_color(r.decode)),
+                        Cell::new(fmt_toks(r.prefill)).fg(Color::AnsiValue(248)),
+                    ]);
+                }
+                println!("{table}");
+            }
+
+            if !wont_run.is_empty() {
+                println!();
+                println!("{}", s_err().apply_to(format!("  won't run{rt_suffix}")));
+                for name in &wont_run {
+                    println!("  {}", s_dim().apply_to(format!("  {name}")));
+                }
+            }
+        }
+    }
+
+    let rt_label = runtimes.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(" / ");
+    println!();
+    println!(
+        "{}",
+        s_hint().apply_to(format!("  gpu key: {key}   estimates: {rt_label}"))
+    );
+    println!();
+
+    Ok(())
+}
+
 // ── Display ──────────────────────────────────────────────────────────
 
 fn print_model_full(model: &Model, _variants: &[Model], opts: &Cli) {
@@ -760,42 +1048,81 @@ fn print_model_full(model: &Model, _variants: &[Model], opts: &Cli) {
 
     if let Some(params) = model.estimated_params() {
         if let Ok(gpus) = hardware::load_bundled_hardware() {
-            let mut rows: Vec<(String, String, estimate::Estimate)> = Vec::new();
+            struct EstRow {
+                gpu_name: String,
+                rt_label: String,
+                quant: estimate::Quant,
+                weight_gb: f64,
+                fit: Fit,
+                decode_tok_s: Option<f64>,
+                prefill_tok_s: Option<f64>,
+            }
+
+            let mut rows: Vec<EstRow> = Vec::new();
             for (key, gpu) in &gpus {
                 if !hardware::DEFAULT_DISPLAY_GPUS.contains(&key.as_str()) {
                     continue;
                 }
-                if let Some((q, mut est)) = estimate::best_quant(gpu, params) {
-                    est.gpu_key = key.clone();
-                    rows.push((key.clone(), q.label().to_string(), est));
+                // Pick the best runtime (highest decode tok/s).
+                let mut best: Option<(Runtime, estimate::Quant, estimate::Estimate)> = None;
+                for rt in gpu.available_runtimes() {
+                    if let Some((q, est)) = estimate::best_quant(gpu, params, rt) {
+                        let dominated = best.as_ref().map(|(_, _, b)| {
+                            est.decode_tok_s.unwrap_or(0.0) <= b.decode_tok_s.unwrap_or(0.0)
+                        }).unwrap_or(false);
+                        if !dominated {
+                            best = Some((rt, q, est));
+                        }
+                    }
+                }
+                if let Some((rt, q, est)) = best {
+                    let rt_label = if gpu.available_runtimes().len() > 1 {
+                        rt.to_string()
+                    } else {
+                        String::new()
+                    };
+                    rows.push(EstRow {
+                        gpu_name: est.gpu_name,
+                        rt_label,
+                        quant: q,
+                        weight_gb: est.weight_gb,
+                        fit: est.fit,
+                        decode_tok_s: est.decode_tok_s,
+                        prefill_tok_s: est.prefill_tok_s,
+                    });
                 }
             }
             if !rows.is_empty() {
+                let has_rt = rows.iter().any(|r| !r.rt_label.is_empty());
+
                 println!();
                 println!("{}", s_header().apply_to("local estimates"));
                 let mut table = Table::new();
                 table.load_preset(presets::NOTHING);
                 table.set_content_arrangement(ContentArrangement::Dynamic);
-                table.set_header(vec![
+                let mut header = vec![
                     Cell::new(" GPU").fg(Color::AnsiValue(243)),
+                ];
+                if has_rt {
+                    header.push(Cell::new("Rt").fg(Color::AnsiValue(243)));
+                }
+                header.extend([
                     Cell::new("Quant").fg(Color::AnsiValue(243)),
                     Cell::new("Weight").fg(Color::AnsiValue(243)),
                     Cell::new("Fit").fg(Color::AnsiValue(243)),
                     Cell::new("Decode").fg(Color::AnsiValue(243)),
                     Cell::new("Prefill").fg(Color::AnsiValue(243)),
                 ]);
+                table.set_header(header);
 
-                for (_, _, est) in &rows {
+                for est in &rows {
                     let fit_str = match &est.fit {
                         Fit::Full => "fits".to_string(),
-                        Fit::Offload { gpu_frac } =>
-                            format!("offload ({:.0}% gpu)", gpu_frac * 100.0),
                         Fit::NoFit => "no fit".to_string(),
                     };
                     let fit_color = match &est.fit {
                         Fit::Full => Color::AnsiValue(114),
-                        Fit::Offload { .. } => Color::AnsiValue(214),
-                        Fit::NoFit => Color::AnsiValue(245),
+                            Fit::NoFit => Color::AnsiValue(245),
                     };
                     let dash = "\u{2500}";
                     let fmt_toks = |v: Option<f64>| -> String {
@@ -812,14 +1139,20 @@ fn print_model_full(model: &Model, _variants: &[Model], opts: &Cli) {
                         None => Color::AnsiValue(245),
                     };
 
-                    table.add_row(vec![
+                    let mut row = vec![
                         Cell::new(&est.gpu_name).fg(Color::AnsiValue(109)),
+                    ];
+                    if has_rt {
+                        row.push(Cell::new(&est.rt_label).fg(Color::AnsiValue(146)));
+                    }
+                    row.extend([
                         Cell::new(est.quant.label()).fg(Color::AnsiValue(248)),
                         Cell::new(format!("{:.0} GB", est.weight_gb)).fg(Color::AnsiValue(248)),
                         Cell::new(&fit_str).fg(fit_color),
                         Cell::new(fmt_toks(est.decode_tok_s)).fg(decode_color),
                         Cell::new(fmt_toks(est.prefill_tok_s)).fg(Color::AnsiValue(248)),
                     ]);
+                    table.add_row(row);
                 }
 
                 println!("{table}");

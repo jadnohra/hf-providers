@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 """Generate data/hardware.toml from dbgpu (TechPowerUp) + manual Apple Silicon entries.
 
-Usage:
+Usage (installed dbgpu):
     uv run --with dbgpu scripts/gen_hardware.py > data/hardware.toml
+
+Usage (fetch latest from PyPI, no extra deps):
+    uv run --with dbgpu scripts/gen_hardware.py --fetch > data/hardware.toml
 """
 
+import argparse
 import sys
 from datetime import date
-from dbgpu import GPUDatabase
 
 # ── Calibrated efficiency factors by architecture ──────────────────────
+# llamacpp_*: llama.cpp / ollama (all platforms)
+# mlx_*: mlx (Apple Silicon only)
 # decode_eff: fraction of peak memory bandwidth utilized during autoregressive decode
 # prefill_eff: fraction of peak FP16 TFLOPS utilized during prompt prefill
-# Calibrated from llama.cpp, vllm, mlx benchmarks (r/LocalLLaMA, artificialanalysis.ai)
+# Sources: r/LocalLLaMA, artificialanalysis.ai, llama.cpp CI, mlx community benchmarks
 
-EFFICIENCY = {
+LLAMACPP_EFFICIENCY = {
     # NVIDIA
     "Ada Lovelace":    (0.65, 0.33),
     "Hopper":          (0.72, 0.45),
@@ -41,15 +46,10 @@ EFFICIENCY = {
     "Battlemage":      (0.45, 0.22),
     "Xe-HPG":          (0.40, 0.20),
     "Xe2-HPG":         (0.45, 0.22),
-    # Apple (manual entries below)
-    "m4":              (0.60, 0.28),
-    "m3":              (0.57, 0.26),
-    "m2":              (0.55, 0.24),
-    "m1":              (0.52, 0.22),
 }
 
-# Fallback by vendor
-EFFICIENCY_FALLBACK = {
+# Fallback by vendor (llama.cpp)
+LLAMACPP_FALLBACK = {
     "NVIDIA": (0.55, 0.25),
     "AMD":    (0.45, 0.22),
     "Intel":  (0.38, 0.18),
@@ -142,21 +142,21 @@ def make_key(d: dict) -> str:
     return key
 
 
-def get_efficiency(d: dict) -> tuple:
+def get_llamacpp_efficiency(d: dict) -> tuple:
     arch = d.get("architecture", "")
     mfr = d.get("manufacturer", "")
     # Try exact match first
-    if arch in EFFICIENCY:
-        return EFFICIENCY[arch]
+    if arch in LLAMACPP_EFFICIENCY:
+        return LLAMACPP_EFFICIENCY[arch]
     # Try case-insensitive match
     arch_lower = arch.lower()
-    for key, val in EFFICIENCY.items():
+    for key, val in LLAMACPP_EFFICIENCY.items():
         if key.lower() == arch_lower:
             return val
-    return EFFICIENCY_FALLBACK.get(mfr, (0.50, 0.22))
+    return LLAMACPP_FALLBACK.get(mfr, (0.50, 0.22))
 
 
-def emit_gpu(key: str, d: dict, decode_eff: float, prefill_eff: float,
+def emit_gpu(key: str, d: dict, llamacpp_de: float, llamacpp_pe: float,
              street_usd: int | None = None):
     name = d["name"]
     vendor = d.get("manufacturer", "unknown").lower()
@@ -177,8 +177,8 @@ def emit_gpu(key: str, d: dict, decode_eff: float, prefill_eff: float,
     lines.append(f'tdp_w = {tdp}')
     if street_usd is not None:
         lines.append(f'street_usd = {street_usd}')
-    lines.append(f'decode_eff = {decode_eff:.2f}')
-    lines.append(f'prefill_eff = {prefill_eff:.2f}')
+    lines.append(f'llamacpp_decode_eff = {llamacpp_de:.2f}')
+    lines.append(f'llamacpp_prefill_eff = {llamacpp_pe:.2f}')
     if source:
         lines.append(f'source = "{source}"')
     return "\n".join(lines)
@@ -197,8 +197,8 @@ APPLE_ENTRIES = [
         "fp16_tflops": 53.5,
         "tdp_w": 75,
         "street_usd": 4999,
-        "decode_eff": 0.60,
-        "prefill_eff": 0.28,
+        "mlx_decode_eff": 0.60, "mlx_prefill_eff": 0.28,
+        "llamacpp_decode_eff": 0.45, "llamacpp_prefill_eff": 0.20,
     },
     {
         "key": "m4_max_64",
@@ -210,8 +210,8 @@ APPLE_ENTRIES = [
         "fp16_tflops": 53.5,
         "tdp_w": 75,
         "street_usd": 2999,
-        "decode_eff": 0.60,
-        "prefill_eff": 0.28,
+        "mlx_decode_eff": 0.60, "mlx_prefill_eff": 0.28,
+        "llamacpp_decode_eff": 0.45, "llamacpp_prefill_eff": 0.20,
     },
     {
         "key": "m4_pro_48",
@@ -223,8 +223,8 @@ APPLE_ENTRIES = [
         "fp16_tflops": 22.1,
         "tdp_w": 45,
         "street_usd": 1999,
-        "decode_eff": 0.58,
-        "prefill_eff": 0.25,
+        "mlx_decode_eff": 0.58, "mlx_prefill_eff": 0.25,
+        "llamacpp_decode_eff": 0.44, "llamacpp_prefill_eff": 0.18,
     },
     {
         "key": "m4_pro_24",
@@ -236,8 +236,8 @@ APPLE_ENTRIES = [
         "fp16_tflops": 22.1,
         "tdp_w": 45,
         "street_usd": 1599,
-        "decode_eff": 0.58,
-        "prefill_eff": 0.25,
+        "mlx_decode_eff": 0.58, "mlx_prefill_eff": 0.25,
+        "llamacpp_decode_eff": 0.44, "llamacpp_prefill_eff": 0.18,
     },
     {
         "key": "m3_max_128",
@@ -249,8 +249,8 @@ APPLE_ENTRIES = [
         "fp16_tflops": 45.2,
         "tdp_w": 75,
         "street_usd": 4499,
-        "decode_eff": 0.57,
-        "prefill_eff": 0.26,
+        "mlx_decode_eff": 0.57, "mlx_prefill_eff": 0.26,
+        "llamacpp_decode_eff": 0.43, "llamacpp_prefill_eff": 0.18,
     },
     {
         "key": "m2_ultra_192",
@@ -262,8 +262,8 @@ APPLE_ENTRIES = [
         "fp16_tflops": 27.2,
         "tdp_w": 120,
         "street_usd": 6999,
-        "decode_eff": 0.55,
-        "prefill_eff": 0.24,
+        "mlx_decode_eff": 0.55, "mlx_prefill_eff": 0.24,
+        "llamacpp_decode_eff": 0.42, "llamacpp_prefill_eff": 0.17,
     },
     {
         "key": "m2_ultra_128",
@@ -275,8 +275,8 @@ APPLE_ENTRIES = [
         "fp16_tflops": 27.2,
         "tdp_w": 120,
         "street_usd": 5499,
-        "decode_eff": 0.55,
-        "prefill_eff": 0.24,
+        "mlx_decode_eff": 0.55, "mlx_prefill_eff": 0.24,
+        "llamacpp_decode_eff": 0.42, "llamacpp_prefill_eff": 0.17,
     },
     {
         "key": "m1_ultra_128",
@@ -288,8 +288,8 @@ APPLE_ENTRIES = [
         "fp16_tflops": 21.2,
         "tdp_w": 120,
         "street_usd": 3999,
-        "decode_eff": 0.52,
-        "prefill_eff": 0.22,
+        "mlx_decode_eff": 0.52, "mlx_prefill_eff": 0.22,
+        "llamacpp_decode_eff": 0.40, "llamacpp_prefill_eff": 0.16,
     },
 ]
 
@@ -305,19 +305,75 @@ def emit_apple(entry: dict) -> str:
     lines.append(f'tdp_w = {entry["tdp_w"]}')
     if "street_usd" in entry:
         lines.append(f'street_usd = {entry["street_usd"]}')
-    lines.append(f'decode_eff = {entry["decode_eff"]:.2f}')
-    lines.append(f'prefill_eff = {entry["prefill_eff"]:.2f}')
+    lines.append(f'llamacpp_decode_eff = {entry["llamacpp_decode_eff"]:.2f}')
+    lines.append(f'llamacpp_prefill_eff = {entry["llamacpp_prefill_eff"]:.2f}')
+    lines.append(f'mlx_decode_eff = {entry["mlx_decode_eff"]:.2f}')
+    lines.append(f'mlx_prefill_eff = {entry["mlx_prefill_eff"]:.2f}')
     return "\n".join(lines)
 
 
-def main():
+def load_specs_bundled():
+    """Load GPU specs from the installed dbgpu package. Returns list of dicts."""
+    from dbgpu import GPUDatabase
     db = GPUDatabase.default()
+    return [g.to_dict() for g in db.specs]
+
+
+def load_specs_fetch():
+    """Download the latest dbgpu data.pkl from PyPI. Returns list of dicts."""
+    import io
+    import json
+    import pickle
+    import tarfile
+    import urllib.request
+
+    print("# Fetching latest dbgpu from PyPI...", file=sys.stderr)
+    r = urllib.request.urlopen("https://pypi.org/pypi/dbgpu/json")
+    pypi = json.loads(r.read())
+    version = pypi["info"]["version"]
+
+    # Find the sdist tarball
+    files = pypi["releases"][version]
+    sdist = next((f for f in files if f["filename"].endswith(".tar.gz")), None)
+    if not sdist:
+        print(f"# ERROR: no sdist found for dbgpu {version}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"# Downloading dbgpu {version}...", file=sys.stderr)
+    resp = urllib.request.urlopen(sdist["url"])
+    raw = resp.read()
+
+    with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tf:
+        for m in tf.getmembers():
+            if m.name.endswith("data.pkl"):
+                f = tf.extractfile(m)
+                specs = pickle.loads(f.read())
+                print(f"# Loaded {len(specs)} GPUs from dbgpu {version}.",
+                      file=sys.stderr)
+                return specs
+
+    print("# ERROR: data.pkl not found in dbgpu package", file=sys.stderr)
+    sys.exit(1)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Generate data/hardware.toml from GPU specs.")
+    parser.add_argument("--fetch", action="store_true",
+                        help="Download latest dbgpu data from PyPI instead of using installed version")
+    args = parser.parse_args()
+
+    if args.fetch:
+        all_dicts = load_specs_fetch()
+        source_label = "dbgpu/PyPI latest (TechPowerUp)"
+    else:
+        all_dicts = load_specs_bundled()
+        source_label = "dbgpu (TechPowerUp)"
 
     # Filter
     gpus = []
     seen_keys = set()
-    for g in db.specs:
-        d = g.to_dict()
+    for d in all_dicts:
         if not should_keep(d):
             continue
         key = make_key(d)
@@ -337,12 +393,13 @@ def main():
 
     # Emit
     print(f"# GPU specs for local inference estimation.")
-    print(f"# Auto-generated from dbgpu (TechPowerUp) + manual Apple Silicon entries.")
+    print(f"# Auto-generated from {source_label} + manual Apple Silicon entries.")
     print(f"# Generated: {date.today().isoformat()}")
     print(f"# Total: {len(gpus)} discrete GPUs + {len(APPLE_ENTRIES)} Apple Silicon")
     print(f"#")
-    print(f"# decode_eff / prefill_eff: calibrated from llama.cpp / vllm / mlx benchmarks.")
-    print(f"# Sources: r/LocalLLaMA, artificialanalysis.ai, llama.cpp CI.")
+    print(f"# llamacpp_*_eff: llama.cpp / ollama efficiency factors")
+    print(f"# mlx_*_eff: mlx efficiency factors (Apple Silicon only)")
+    print(f"# Sources: r/LocalLLaMA, artificialanalysis.ai, llama.cpp CI, mlx community benchmarks.")
     print()
 
     # NVIDIA
@@ -350,7 +407,7 @@ def main():
     print(f"# ── NVIDIA ({len(nvidia)} GPUs) ──")
     print()
     for key, d in nvidia:
-        de, pe = get_efficiency(d)
+        de, pe = get_llamacpp_efficiency(d)
         print(emit_gpu(key, d, de, pe))
         print()
 
@@ -360,7 +417,7 @@ def main():
         print(f"# ── AMD ({len(amd)} GPUs) ──")
         print()
         for key, d in amd:
-            de, pe = get_efficiency(d)
+            de, pe = get_llamacpp_efficiency(d)
             print(emit_gpu(key, d, de, pe))
             print()
 
@@ -370,7 +427,7 @@ def main():
         print(f"# ── Intel ({len(intel)} GPUs) ──")
         print()
         for key, d in intel:
-            de, pe = get_efficiency(d)
+            de, pe = get_llamacpp_efficiency(d)
             print(emit_gpu(key, d, de, pe))
             print()
 

@@ -1,10 +1,11 @@
 # GPU specs for local inference estimation.
-# Auto-generated from dbgpu (TechPowerUp) + manual Apple Silicon entries.
-# Generated: 2026-02-19
+# Auto-generated from dbgpu/PyPI latest (TechPowerUp) + manual Apple Silicon entries.
+# Generated: 2026-02-21
 # Total: 212 discrete GPUs + 8 Apple Silicon
 #
-# decode_eff / prefill_eff: calibrated from llama.cpp / vllm / mlx benchmarks.
-# Sources: r/LocalLLaMA, artificialanalysis.ai, llama.cpp CI.
+# llamacpp_*_eff: llama.cpp / ollama efficiency factors
+# mlx_*_eff: mlx efficiency factors (Apple Silicon only)
+# Sources: r/LocalLLaMA, artificialanalysis.ai, llama.cpp CI, mlx community benchmarks.
 
 # ── NVIDIA (138 GPUs) ──
 
@@ -16,8 +17,8 @@ vram_gb = 144
 mem_bw_gb_s = 4099.999999999999
 fp16_tflops = 1231.8
 tdp_w = 1400
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/b300.c4375"
 
 [gpu.h200_nvl]
@@ -28,8 +29,8 @@ vram_gb = 141
 mem_bw_gb_s = 4890
 fp16_tflops = 241.3
 tdp_w = 600
-decode_eff = 0.72
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.72
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/h200-nvl.c4254"
 
 [gpu.h200_sxm_141_gb]
@@ -40,8 +41,8 @@ vram_gb = 141
 mem_bw_gb_s = 4890
 fp16_tflops = 267.6
 tdp_w = 700
-decode_eff = 0.72
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.72
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/h200-sxm-141-gb.c4255"
 
 [gpu.gb10]
@@ -52,8 +53,8 @@ vram_gb = 128
 mem_bw_gb_s = 273.2
 fp16_tflops = 29.7
 tdp_w = 140
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/gb10.c4342"
 
 [gpu.jetson_t5000]
@@ -64,8 +65,8 @@ vram_gb = 128
 mem_bw_gb_s = 273.2
 fp16_tflops = 51.7
 tdp_w = 40
-decode_eff = 0.70
-prefill_eff = 0.38
+llamacpp_decode_eff = 0.70
+llamacpp_prefill_eff = 0.38
 source = "https://www.techpowerup.com/gpu-specs/jetson-t5000.c4370"
 
 [gpu.h100_pcie_96_gb]
@@ -76,8 +77,8 @@ vram_gb = 96
 mem_bw_gb_s = 3360
 fp16_tflops = 248.3
 tdp_w = 700
-decode_eff = 0.72
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.72
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/h100-pcie-96-gb.c4164"
 
 [gpu.h100_sxm5_96_gb]
@@ -88,8 +89,8 @@ vram_gb = 96
 mem_bw_gb_s = 3360
 fp16_tflops = 267.6
 tdp_w = 700
-decode_eff = 0.72
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.72
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/h100-sxm5-96-gb.c3974"
 
 [gpu.rtx_pro_6000_blackwell_server]
@@ -100,8 +101,8 @@ vram_gb = 96
 mem_bw_gb_s = 1790
 fp16_tflops = 126.0
 tdp_w = 600
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/rtx-pro-6000-blackwell-server.c4274"
 
 [gpu.h100_nvl_94_gb]
@@ -112,8 +113,8 @@ vram_gb = 94
 mem_bw_gb_s = 3940
 fp16_tflops = 241.3
 tdp_w = 400
-decode_eff = 0.72
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.72
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/h100-nvl-94-gb.c4327"
 
 [gpu.h100_sxm5_94_gb]
@@ -124,8 +125,8 @@ vram_gb = 94
 mem_bw_gb_s = 3360
 fp16_tflops = 267.6
 tdp_w = 700
-decode_eff = 0.72
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.72
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/h100-sxm5-94-gb.c4294"
 
 [gpu.b200]
@@ -136,8 +137,8 @@ vram_gb = 90
 mem_bw_gb_s = 4099.999999999999
 fp16_tflops = 1191.2
 tdp_w = 1000
-decode_eff = 0.70
-prefill_eff = 0.38
+llamacpp_decode_eff = 0.70
+llamacpp_prefill_eff = 0.38
 source = "https://www.techpowerup.com/gpu-specs/b200.c4210"
 
 [gpu.a100_sxm4_80_gb]
@@ -148,8 +149,8 @@ vram_gb = 80
 mem_bw_gb_s = 2040
 fp16_tflops = 78.0
 tdp_w = 400
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a100-sxm4-80-gb.c3746"
 
 [gpu.a100_pcie_80_gb]
@@ -160,8 +161,8 @@ vram_gb = 80
 mem_bw_gb_s = 1940
 fp16_tflops = 78.0
 tdp_w = 300
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a100-pcie-80-gb.c3821"
 
 [gpu.a100x]
@@ -172,8 +173,8 @@ vram_gb = 80
 mem_bw_gb_s = 2040
 fp16_tflops = 79.6
 tdp_w = 300
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a100x.c3958"
 
 [gpu.a800_pcie_80_gb]
@@ -184,8 +185,8 @@ vram_gb = 80
 mem_bw_gb_s = 1940
 fp16_tflops = 78.0
 tdp_w = 250
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a800-pcie-80-gb.c3965"
 
 [gpu.a800_sxm4_80_gb]
@@ -196,8 +197,8 @@ vram_gb = 80
 mem_bw_gb_s = 2040
 fp16_tflops = 78.0
 tdp_w = 400
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a800-sxm4-80-gb.c3966"
 
 [gpu.h100_pcie_80_gb]
@@ -208,8 +209,8 @@ vram_gb = 80
 mem_bw_gb_s = 2040
 fp16_tflops = 204.9
 tdp_w = 350
-decode_eff = 0.72
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.72
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/h100-pcie-80-gb.c3899"
 
 [gpu.h100_sxm5_80_gb]
@@ -220,8 +221,8 @@ vram_gb = 80
 mem_bw_gb_s = 3360
 fp16_tflops = 267.6
 tdp_w = 700
-decode_eff = 0.72
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.72
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/h100-sxm5-80-gb.c3900"
 
 [gpu.h100_cnx]
@@ -232,8 +233,8 @@ vram_gb = 80
 mem_bw_gb_s = 2040
 fp16_tflops = 215.4
 tdp_w = 350
-decode_eff = 0.72
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.72
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/h100-cnx.c4131"
 
 [gpu.h800_pcie_80_gb]
@@ -244,8 +245,8 @@ vram_gb = 80
 mem_bw_gb_s = 2040
 fp16_tflops = 204.9
 tdp_w = 350
-decode_eff = 0.72
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.72
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/h800-pcie-80-gb.c4181"
 
 [gpu.h800_sxm5]
@@ -256,8 +257,8 @@ vram_gb = 80
 mem_bw_gb_s = 3360
 fp16_tflops = 237.2
 tdp_w = 700
-decode_eff = 0.72
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.72
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/h800-sxm5.c3975"
 
 [gpu.h100_sxm5_64_gb]
@@ -268,8 +269,8 @@ vram_gb = 64
 mem_bw_gb_s = 2020
 fp16_tflops = 267.6
 tdp_w = 700
-decode_eff = 0.72
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.72
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/h100-sxm5-64-gb.c4165"
 
 [gpu.jetson_t4000]
@@ -280,8 +281,8 @@ vram_gb = 64
 mem_bw_gb_s = 273.2
 fp16_tflops = 31.0
 tdp_w = 40
-decode_eff = 0.70
-prefill_eff = 0.38
+llamacpp_decode_eff = 0.70
+llamacpp_prefill_eff = 0.38
 source = "https://www.techpowerup.com/gpu-specs/jetson-t4000.c4369"
 
 [gpu.quadro_rtx_8000]
@@ -292,8 +293,8 @@ vram_gb = 48
 mem_bw_gb_s = 672
 fp16_tflops = 32.6
 tdp_w = 260
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/quadro-rtx-8000.c3306"
 
 [gpu.quadro_rtx_8000_passive]
@@ -304,8 +305,8 @@ vram_gb = 48
 mem_bw_gb_s = 624
 fp16_tflops = 29.9
 tdp_w = 260
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/quadro-rtx-8000-passive.c3470"
 
 [gpu.a40_pcie]
@@ -316,8 +317,8 @@ vram_gb = 48
 mem_bw_gb_s = 695.8
 fp16_tflops = 37.4
 tdp_w = 300
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a40-pcie.c3700"
 
 [gpu.rtx_a6000]
@@ -328,8 +329,8 @@ vram_gb = 48
 mem_bw_gb_s = 768
 fp16_tflops = 38.7
 tdp_w = 300
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/rtx-a6000.c3686"
 
 [gpu.rtx_6000_ada_generation]
@@ -340,8 +341,8 @@ vram_gb = 48
 mem_bw_gb_s = 960
 fp16_tflops = 91.1
 tdp_w = 300
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/rtx-6000-ada-generation.c3933"
 
 [gpu.rtx_5880_ada_generation]
@@ -352,8 +353,8 @@ vram_gb = 48
 mem_bw_gb_s = 864
 fp16_tflops = 69.3
 tdp_w = 285
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/rtx-5880-ada-generation.c4191"
 
 [gpu.a100_pcie_40_gb]
@@ -364,8 +365,8 @@ vram_gb = 40
 mem_bw_gb_s = 1560
 fp16_tflops = 78.0
 tdp_w = 250
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a100-pcie-40-gb.c3623"
 
 [gpu.a100_sxm4_40_gb]
@@ -376,8 +377,8 @@ vram_gb = 40
 mem_bw_gb_s = 1560
 fp16_tflops = 78.0
 tdp_w = 400
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a100-sxm4-40-gb.c3506"
 
 [gpu.a800_pcie_40_gb]
@@ -388,8 +389,8 @@ vram_gb = 40
 mem_bw_gb_s = 1560
 fp16_tflops = 78.0
 tdp_w = 250
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a800-pcie-40-gb.c3964"
 
 [gpu.titan_v_ceo_edition]
@@ -400,8 +401,8 @@ vram_gb = 32
 mem_bw_gb_s = 868.4
 fp16_tflops = 29.8
 tdp_w = 250
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/titan-v-ceo-edition.c3277"
 
 [gpu.rtx_5000_ada_generation]
@@ -412,8 +413,8 @@ vram_gb = 32
 mem_bw_gb_s = 576
 fp16_tflops = 65.3
 tdp_w = 250
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/rtx-5000-ada-generation.c4152"
 
 [gpu.rtx_5090]
@@ -424,8 +425,8 @@ vram_gb = 32
 mem_bw_gb_s = 1790
 fp16_tflops = 104.8
 tdp_w = 575
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-5090.c4216"
 
 [gpu.rtx_5090_d]
@@ -436,8 +437,8 @@ vram_gb = 32
 mem_bw_gb_s = 1790
 fp16_tflops = 104.8
 tdp_w = 575
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-5090-d.c4253"
 
 [gpu.quadro_p6000]
@@ -448,8 +449,8 @@ vram_gb = 24
 mem_bw_gb_s = 432.8
 fp16_tflops = 0.2
 tdp_w = 250
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/quadro-p6000.c2865"
 
 [gpu.tesla_p10]
@@ -460,8 +461,8 @@ vram_gb = 24
 mem_bw_gb_s = 694.3
 fp16_tflops = 0.2
 tdp_w = 150
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/tesla-p10.c3750"
 
 [gpu.tesla_p40]
@@ -472,8 +473,8 @@ vram_gb = 24
 mem_bw_gb_s = 347.1
 fp16_tflops = 0.2
 tdp_w = 250
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/tesla-p40.c2878"
 
 [gpu.quadro_rtx_6000]
@@ -484,8 +485,8 @@ vram_gb = 24
 mem_bw_gb_s = 672
 fp16_tflops = 32.6
 tdp_w = 260
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/quadro-rtx-6000.c3307"
 
 [gpu.quadro_rtx_6000_passive]
@@ -496,8 +497,8 @@ vram_gb = 24
 mem_bw_gb_s = 624
 fp16_tflops = 29.9
 tdp_w = 260
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/quadro-rtx-6000-passive.c3469"
 
 [gpu.titan_rtx]
@@ -508,8 +509,8 @@ vram_gb = 24
 mem_bw_gb_s = 672
 fp16_tflops = 32.6
 tdp_w = 280
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/titan-rtx.c3311"
 
 [gpu.rtx_3090]
@@ -520,8 +521,8 @@ vram_gb = 24
 mem_bw_gb_s = 936.2
 fp16_tflops = 35.6
 tdp_w = 350
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3090.c3622"
 
 [gpu.a10_pcie]
@@ -532,8 +533,8 @@ vram_gb = 24
 mem_bw_gb_s = 600.2
 fp16_tflops = 31.2
 tdp_w = 150
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a10-pcie.c3793"
 
 [gpu.a10g]
@@ -544,8 +545,8 @@ vram_gb = 24
 mem_bw_gb_s = 600.2
 fp16_tflops = 31.5
 tdp_w = 150
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a10g.c3798"
 
 [gpu.a30_pcie]
@@ -556,8 +557,8 @@ vram_gb = 24
 mem_bw_gb_s = 933.1
 fp16_tflops = 10.3
 tdp_w = 165
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a30-pcie.c3792"
 
 [gpu.a30x]
@@ -568,8 +569,8 @@ vram_gb = 24
 mem_bw_gb_s = 1220
 fp16_tflops = 10.3
 tdp_w = 230
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a30x.c3968"
 
 [gpu.pg506_207]
@@ -580,8 +581,8 @@ vram_gb = 24
 mem_bw_gb_s = 933.1
 fp16_tflops = 10.3
 tdp_w = 165
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/pg506-207.c3962"
 
 [gpu.pg506_217]
@@ -592,8 +593,8 @@ vram_gb = 24
 mem_bw_gb_s = 933.1
 fp16_tflops = 10.3
 tdp_w = 165
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/pg506-217.c3963"
 
 [gpu.pg506_232]
@@ -604,8 +605,8 @@ vram_gb = 24
 mem_bw_gb_s = 933.1
 fp16_tflops = 10.3
 tdp_w = 165
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/pg506-232.c3799"
 
 [gpu.pg506_242]
@@ -616,8 +617,8 @@ vram_gb = 24
 mem_bw_gb_s = 933.1
 fp16_tflops = 10.3
 tdp_w = 165
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/pg506-242.c3823"
 
 [gpu.rtx_a5000]
@@ -628,8 +629,8 @@ vram_gb = 24
 mem_bw_gb_s = 768
 fp16_tflops = 27.8
 tdp_w = 230
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/rtx-a5000.c3748"
 
 [gpu.rtx_3090_ti]
@@ -640,8 +641,8 @@ vram_gb = 24
 mem_bw_gb_s = 1010
 fp16_tflops = 40.0
 tdp_w = 450
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3090-ti.c3829"
 
 [gpu.rtx_4090]
@@ -652,8 +653,8 @@ vram_gb = 24
 mem_bw_gb_s = 1010
 fp16_tflops = 82.6
 tdp_w = 450
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4090.c3889"
 
 [gpu.rtx_a5500]
@@ -664,8 +665,8 @@ vram_gb = 24
 mem_bw_gb_s = 768
 fp16_tflops = 34.1
 tdp_w = 230
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/rtx-a5500.c3901"
 
 [gpu.rtx_4090_d]
@@ -676,8 +677,8 @@ vram_gb = 24
 mem_bw_gb_s = 1010
 fp16_tflops = 73.5
 tdp_w = 425
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4090-d.c4189"
 
 [gpu.rtx_4500_ada_generation]
@@ -688,8 +689,8 @@ vram_gb = 24
 mem_bw_gb_s = 432
 fp16_tflops = 39.6
 tdp_w = 210
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/rtx-4500-ada-generation.c4172"
 
 [gpu.rtx_5090_d_v2]
@@ -700,8 +701,8 @@ vram_gb = 24
 mem_bw_gb_s = 1340
 fp16_tflops = 104.8
 tdp_w = 575
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-5090-d-v2.c4310"
 
 [gpu.rtx_a4500]
@@ -712,8 +713,8 @@ vram_gb = 20
 mem_bw_gb_s = 640
 fp16_tflops = 23.6
 tdp_w = 200
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/rtx-a4500.c3849"
 
 [gpu.a10m]
@@ -724,8 +725,8 @@ vram_gb = 20
 mem_bw_gb_s = 500.2
 fp16_tflops = 23.4
 tdp_w = 150
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a10m.c4200"
 
 [gpu.rtx_3080_ti_20_gb]
@@ -736,8 +737,8 @@ vram_gb = 20
 mem_bw_gb_s = 760.3
 fp16_tflops = 34.1
 tdp_w = 350
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3080-ti-20-gb.c3831"
 
 [gpu.rtx_4000_ada_generation]
@@ -748,8 +749,8 @@ vram_gb = 20
 mem_bw_gb_s = 360
 fp16_tflops = 26.7
 tdp_w = 130
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/rtx-4000-ada-generation.c4171"
 
 [gpu.rtx_4000_sff_ada_generation]
@@ -760,8 +761,8 @@ vram_gb = 20
 mem_bw_gb_s = 280
 fp16_tflops = 19.2
 tdp_w = 70
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/rtx-4000-sff-ada-generation.c4139"
 
 [gpu.quadro_gp100]
@@ -772,8 +773,8 @@ vram_gb = 16
 mem_bw_gb_s = 732.2
 fp16_tflops = 20.7
 tdp_w = 235
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/quadro-gp100.c2994"
 
 [gpu.quadro_p5000]
@@ -784,8 +785,8 @@ vram_gb = 16
 mem_bw_gb_s = 288.5
 fp16_tflops = 0.1
 tdp_w = 180
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/quadro-p5000.c2864"
 
 [gpu.tesla_p100_dgxs]
@@ -796,8 +797,8 @@ vram_gb = 16
 mem_bw_gb_s = 732.2
 fp16_tflops = 21.2
 tdp_w = 300
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/tesla-p100-dgxs.c3285"
 
 [gpu.tesla_p100_pcie_16_gb]
@@ -808,8 +809,8 @@ vram_gb = 16
 mem_bw_gb_s = 732.2
 fp16_tflops = 19.1
 tdp_w = 250
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/tesla-p100-pcie-16-gb.c2888"
 
 [gpu.tesla_p100_sxm2]
@@ -820,8 +821,8 @@ vram_gb = 16
 mem_bw_gb_s = 732.2
 fp16_tflops = 21.2
 tdp_w = 300
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/tesla-p100-sxm2.c3183"
 
 [gpu.quadro_rtx_5000]
@@ -832,8 +833,8 @@ vram_gb = 16
 mem_bw_gb_s = 448
 fp16_tflops = 22.3
 tdp_w = 230
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/quadro-rtx-5000.c3308"
 
 [gpu.a16_pcie]
@@ -844,8 +845,8 @@ vram_gb = 16
 mem_bw_gb_s = 200.1
 fp16_tflops = 4.5
 tdp_w = 250
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a16-pcie.c3794"
 
 [gpu.a2]
@@ -856,8 +857,8 @@ vram_gb = 16
 mem_bw_gb_s = 200.1
 fp16_tflops = 4.5
 tdp_w = 60
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a2.c3848"
 
 [gpu.a2_pcie]
@@ -868,8 +869,8 @@ vram_gb = 16
 mem_bw_gb_s = 200.1
 fp16_tflops = 4.5
 tdp_w = 60
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/a2-pcie.c4112"
 
 [gpu.rtx_a4000]
@@ -880,8 +881,8 @@ vram_gb = 16
 mem_bw_gb_s = 448
 fp16_tflops = 19.2
 tdp_w = 140
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/rtx-a4000.c3756"
 
 [gpu.rtx_a4000h]
@@ -892,8 +893,8 @@ vram_gb = 16
 mem_bw_gb_s = 448
 fp16_tflops = 19.2
 tdp_w = 140
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/rtx-a4000h.c3969"
 
 [gpu.rtx_4080]
@@ -904,8 +905,8 @@ vram_gb = 16
 mem_bw_gb_s = 716.8
 fp16_tflops = 48.7
 tdp_w = 320
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4080.c3888"
 
 [gpu.rtx_4060_ti_16_gb]
@@ -916,8 +917,8 @@ vram_gb = 16
 mem_bw_gb_s = 288
 fp16_tflops = 22.1
 tdp_w = 165
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4060-ti-16-gb.c4155"
 
 [gpu.rtx_4070_ti_super]
@@ -928,8 +929,8 @@ vram_gb = 16
 mem_bw_gb_s = 672.3
 fp16_tflops = 44.1
 tdp_w = 285
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4070-ti-super.c4187"
 
 [gpu.rtx_4070_ti_super_ad102]
@@ -940,8 +941,8 @@ vram_gb = 16
 mem_bw_gb_s = 672.3
 fp16_tflops = 44.1
 tdp_w = 285
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4070-ti-super-ad102.c4215"
 
 [gpu.rtx_4080_super]
@@ -952,8 +953,8 @@ vram_gb = 16
 mem_bw_gb_s = 736.3
 fp16_tflops = 52.2
 tdp_w = 320
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4080-super.c4182"
 
 [gpu.rtx_2000_ada_generation]
@@ -964,8 +965,8 @@ vram_gb = 16
 mem_bw_gb_s = 256
 fp16_tflops = 12.0
 tdp_w = 70
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/rtx-2000-ada-generation.c4199"
 
 [gpu.rtx_5060_ti_16_gb]
@@ -976,8 +977,8 @@ vram_gb = 16
 mem_bw_gb_s = 448
 fp16_tflops = 23.7
 tdp_w = 180
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-5060-ti-16-gb.c4292"
 
 [gpu.rtx_5070_ti]
@@ -988,8 +989,8 @@ vram_gb = 16
 mem_bw_gb_s = 896
 fp16_tflops = 43.9
 tdp_w = 300
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-5070-ti.c4243"
 
 [gpu.rtx_5080]
@@ -1000,8 +1001,8 @@ vram_gb = 16
 mem_bw_gb_s = 960
 fp16_tflops = 56.3
 tdp_w = 360
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-5080.c4217"
 
 [gpu.tesla_p100_pcie_12_gb]
@@ -1012,8 +1013,8 @@ vram_gb = 12
 mem_bw_gb_s = 549.1
 fp16_tflops = 19.1
 tdp_w = 250
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/tesla-p100-pcie-12-gb.c2915"
 
 [gpu.titan_x_pascal]
@@ -1024,8 +1025,8 @@ vram_gb = 12
 mem_bw_gb_s = 480.4
 fp16_tflops = 0.2
 tdp_w = 250
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/titan-x-pascal.c2863"
 
 [gpu.titan_v]
@@ -1036,8 +1037,8 @@ vram_gb = 12
 mem_bw_gb_s = 651.3
 fp16_tflops = 29.8
 tdp_w = 250
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/titan-v.c3051"
 
 [gpu.titan_xp]
@@ -1048,8 +1049,8 @@ vram_gb = 12
 mem_bw_gb_s = 547.6
 fp16_tflops = 0.2
 tdp_w = 250
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/titan-xp.c2948"
 
 [gpu.rtx_2060_12_gb]
@@ -1060,8 +1061,8 @@ vram_gb = 12
 mem_bw_gb_s = 336
 fp16_tflops = 14.4
 tdp_w = 184
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-2060-12-gb.c3836"
 
 [gpu.rtx_3060_12_gb]
@@ -1072,8 +1073,8 @@ vram_gb = 12
 mem_bw_gb_s = 360
 fp16_tflops = 12.7
 tdp_w = 170
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3060-12-gb.c3682"
 
 [gpu.rtx_3060_12_gb_ga104]
@@ -1084,8 +1085,8 @@ vram_gb = 12
 mem_bw_gb_s = 360
 fp16_tflops = 12.7
 tdp_w = 170
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3060-12-gb-ga104.c3832"
 
 [gpu.rtx_3080_ti]
@@ -1096,8 +1097,8 @@ vram_gb = 12
 mem_bw_gb_s = 912.4
 fp16_tflops = 34.1
 tdp_w = 350
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3080-ti.c3735"
 
 [gpu.rtx_a2000_12_gb]
@@ -1108,8 +1109,8 @@ vram_gb = 12
 mem_bw_gb_s = 288
 fp16_tflops = 8.0
 tdp_w = 70
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/rtx-a2000-12-gb.c3853"
 
 [gpu.rtx_a5000_12q]
@@ -1120,8 +1121,8 @@ vram_gb = 12
 mem_bw_gb_s = 768
 fp16_tflops = 27.8
 tdp_w = 230
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/rtx-a5000-12q.c3991"
 
 [gpu.rtx_3080_12_gb]
@@ -1132,8 +1133,8 @@ vram_gb = 12
 mem_bw_gb_s = 912.4
 fp16_tflops = 30.6
 tdp_w = 350
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3080-12-gb.c3834"
 
 [gpu.rtx_4070]
@@ -1144,8 +1145,8 @@ vram_gb = 12
 mem_bw_gb_s = 504.2
 fp16_tflops = 29.1
 tdp_w = 200
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4070.c3924"
 
 [gpu.rtx_4070_ti]
@@ -1156,8 +1157,8 @@ vram_gb = 12
 mem_bw_gb_s = 504.2
 fp16_tflops = 40.1
 tdp_w = 285
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4070-ti.c3950"
 
 [gpu.rtx_4070_ad103]
@@ -1168,8 +1169,8 @@ vram_gb = 12
 mem_bw_gb_s = 504.2
 fp16_tflops = 29.1
 tdp_w = 200
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4070-ad103.c4205"
 
 [gpu.rtx_4070_gddr6]
@@ -1180,8 +1181,8 @@ vram_gb = 12
 mem_bw_gb_s = 480
 fp16_tflops = 29.1
 tdp_w = 200
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4070-gddr6.c4228"
 
 [gpu.rtx_4070_super]
@@ -1192,8 +1193,8 @@ vram_gb = 12
 mem_bw_gb_s = 504.2
 fp16_tflops = 35.5
 tdp_w = 220
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4070-super.c4186"
 
 [gpu.rtx_5070]
@@ -1204,8 +1205,8 @@ vram_gb = 12
 mem_bw_gb_s = 672
 fp16_tflops = 30.9
 tdp_w = 250
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-5070.c4218"
 
 [gpu.gtx_1080_ti]
@@ -1216,8 +1217,8 @@ vram_gb = 11
 mem_bw_gb_s = 484.4
 fp16_tflops = 0.2
 tdp_w = 250
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/geforce-gtx-1080-ti.c2877"
 
 [gpu.rtx_2080_ti]
@@ -1228,8 +1229,8 @@ vram_gb = 11
 mem_bw_gb_s = 616
 fp16_tflops = 26.9
 tdp_w = 250
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-2080-ti.c3305"
 
 [gpu.rtx_3080]
@@ -1240,8 +1241,8 @@ vram_gb = 10
 mem_bw_gb_s = 760.3
 fp16_tflops = 29.8
 tdp_w = 320
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3080.c3621"
 
 [gpu.gtx_1070]
@@ -1252,8 +1253,8 @@ vram_gb = 8
 mem_bw_gb_s = 256.3
 fp16_tflops = 0.1
 tdp_w = 150
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/geforce-gtx-1070.c2840"
 
 [gpu.gtx_1080]
@@ -1264,8 +1265,8 @@ vram_gb = 8
 mem_bw_gb_s = 320.3
 fp16_tflops = 0.1
 tdp_w = 180
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/geforce-gtx-1080.c2839"
 
 [gpu.tesla_p4]
@@ -1276,8 +1277,8 @@ vram_gb = 8
 mem_bw_gb_s = 192.3
 fp16_tflops = 0.1
 tdp_w = 75
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/tesla-p4.c2879"
 
 [gpu.gtx_1070_ti]
@@ -1288,8 +1289,8 @@ vram_gb = 8
 mem_bw_gb_s = 256.3
 fp16_tflops = 0.1
 tdp_w = 180
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/geforce-gtx-1070-ti.c3010"
 
 [gpu.gtx_1080_11gbps]
@@ -1300,8 +1301,8 @@ vram_gb = 8
 mem_bw_gb_s = 352.3
 fp16_tflops = 0.1
 tdp_w = 180
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/geforce-gtx-1080-11gbps.c2951"
 
 [gpu.quadro_p4000]
@@ -1312,8 +1313,8 @@ vram_gb = 8
 mem_bw_gb_s = 243.3
 fp16_tflops = 0.1
 tdp_w = 105
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/quadro-p4000.c2930"
 
 [gpu.gtx_1070_gddr5x]
@@ -1324,8 +1325,8 @@ vram_gb = 8
 mem_bw_gb_s = 256.3
 fp16_tflops = 0.1
 tdp_w = 150
-decode_eff = 0.50
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/geforce-gtx-1070-gddr5x.c3343"
 
 [gpu.rtx_2070]
@@ -1336,8 +1337,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 14.9
 tdp_w = 175
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-2070.c3252"
 
 [gpu.rtx_2080]
@@ -1348,8 +1349,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 20.1
 tdp_w = 215
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-2080.c3224"
 
 [gpu.quadro_rtx_4000]
@@ -1360,8 +1361,8 @@ vram_gb = 8
 mem_bw_gb_s = 416
 fp16_tflops = 14.2
 tdp_w = 160
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/quadro-rtx-4000.c3336"
 
 [gpu.rtx_2060_super]
@@ -1372,8 +1373,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 14.4
 tdp_w = 175
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-2060-super.c3441"
 
 [gpu.rtx_2070_super]
@@ -1384,8 +1385,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 18.1
 tdp_w = 215
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-2070-super.c3440"
 
 [gpu.rtx_2080_super]
@@ -1396,8 +1397,8 @@ vram_gb = 8
 mem_bw_gb_s = 495.9
 fp16_tflops = 22.3
 tdp_w = 250
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-2080-super.c3439"
 
 [gpu.rtx_3060_ti]
@@ -1408,8 +1409,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 16.2
 tdp_w = 200
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3060-ti.c3681"
 
 [gpu.rtx_3070]
@@ -1420,8 +1421,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 20.3
 tdp_w = 220
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3070.c3674"
 
 [gpu.rtx_3070_ti]
@@ -1432,8 +1433,8 @@ vram_gb = 8
 mem_bw_gb_s = 608.3
 fp16_tflops = 21.8
 tdp_w = 290
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3070-ti.c3675"
 
 [gpu.rtx_a5000_8q]
@@ -1444,8 +1445,8 @@ vram_gb = 8
 mem_bw_gb_s = 768
 fp16_tflops = 27.8
 tdp_w = 230
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/rtx-a5000-8q.c3990"
 
 [gpu.t1000_8_gb]
@@ -1456,8 +1457,8 @@ vram_gb = 8
 mem_bw_gb_s = 160
 fp16_tflops = 5.0
 tdp_w = 50
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.58
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/t1000-8-gb.c3842"
 
 [gpu.rtx_3050_8_gb]
@@ -1468,8 +1469,8 @@ vram_gb = 8
 mem_bw_gb_s = 224
 fp16_tflops = 9.1
 tdp_w = 130
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3050-8-gb.c3858"
 
 [gpu.rtx_3050_8_gb_ga107]
@@ -1480,8 +1481,8 @@ vram_gb = 8
 mem_bw_gb_s = 224
 fp16_tflops = 9.1
 tdp_w = 115
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3050-8-gb-ga107.c3880"
 
 [gpu.rtx_3050_oem]
@@ -1492,8 +1493,8 @@ vram_gb = 8
 mem_bw_gb_s = 224
 fp16_tflops = 8.1
 tdp_w = 130
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3050-oem.c3915"
 
 [gpu.rtx_3060_8_gb]
@@ -1504,8 +1505,8 @@ vram_gb = 8
 mem_bw_gb_s = 240
 fp16_tflops = 12.7
 tdp_w = 170
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3060-8-gb.c3937"
 
 [gpu.rtx_3060_8_gb_ga104]
@@ -1516,8 +1517,8 @@ vram_gb = 8
 mem_bw_gb_s = 240
 fp16_tflops = 12.7
 tdp_w = 195
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3060-8-gb-ga104.c4132"
 
 [gpu.rtx_3060_ti_ga103]
@@ -1528,8 +1529,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 16.2
 tdp_w = 200
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3060-ti-ga103.c3872"
 
 [gpu.rtx_3060_ti_gddr6x]
@@ -1540,8 +1541,8 @@ vram_gb = 8
 mem_bw_gb_s = 608.3
 fp16_tflops = 16.2
 tdp_w = 225
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3060-ti-gddr6x.c3935"
 
 [gpu.rtx_3070_ti_8_gb_ga102]
@@ -1552,8 +1553,8 @@ vram_gb = 8
 mem_bw_gb_s = 608.3
 fp16_tflops = 21.8
 tdp_w = 290
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3070-ti-8-gb-ga102.c3936"
 
 [gpu.rtx_3070_tim]
@@ -1564,8 +1565,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 16.6
 tdp_w = 220
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-3070-tim.c3951"
 
 [gpu.rtx_4060]
@@ -1576,8 +1577,8 @@ vram_gb = 8
 mem_bw_gb_s = 272
 fp16_tflops = 15.1
 tdp_w = 115
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4060.c4107"
 
 [gpu.rtx_4060_ti_8_gb]
@@ -1588,8 +1589,8 @@ vram_gb = 8
 mem_bw_gb_s = 288
 fp16_tflops = 22.1
 tdp_w = 160
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4060-ti-8-gb.c3890"
 
 [gpu.rtx_4060_ad106]
@@ -1600,8 +1601,8 @@ vram_gb = 8
 mem_bw_gb_s = 272
 fp16_tflops = 15.1
 tdp_w = 115
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4060-ad106.c3891"
 
 [gpu.rtx_4060_ti_ad104]
@@ -1612,8 +1613,8 @@ vram_gb = 8
 mem_bw_gb_s = 288
 fp16_tflops = 22.1
 tdp_w = 160
-decode_eff = 0.65
-prefill_eff = 0.33
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.33
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-4060-ti-ad104.c4204"
 
 [gpu.rtx_a1000]
@@ -1624,8 +1625,8 @@ vram_gb = 8
 mem_bw_gb_s = 192
 fp16_tflops = 6.7
 tdp_w = 50
-decode_eff = 0.62
-prefill_eff = 0.30
+llamacpp_decode_eff = 0.62
+llamacpp_prefill_eff = 0.30
 source = "https://www.techpowerup.com/gpu-specs/rtx-a1000.c4211"
 
 [gpu.rtx_5050]
@@ -1636,8 +1637,8 @@ vram_gb = 8
 mem_bw_gb_s = 320
 fp16_tflops = 13.2
 tdp_w = 130
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-5050.c4220"
 
 [gpu.rtx_5060]
@@ -1648,8 +1649,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 19.2
 tdp_w = 145
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-5060.c4219"
 
 [gpu.rtx_5060_ti_8_gb]
@@ -1660,8 +1661,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 23.7
 tdp_w = 180
-decode_eff = 0.55
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.55
+llamacpp_prefill_eff = 0.25
 source = "https://www.techpowerup.com/gpu-specs/geforce-rtx-5060-ti-8-gb.c4246"
 
 # ── AMD (67 GPUs) ──
@@ -1674,8 +1675,8 @@ vram_gb = 288
 mem_bw_gb_s = 10300
 fp16_tflops = 653.7
 tdp_w = 1000
-decode_eff = 0.68
-prefill_eff = 0.42
+llamacpp_decode_eff = 0.68
+llamacpp_prefill_eff = 0.42
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi325x.c4231"
 
 [gpu.mi350x]
@@ -1686,8 +1687,8 @@ vram_gb = 288
 mem_bw_gb_s = 8189.999999999999
 fp16_tflops = 576.7
 tdp_w = 1000
-decode_eff = 0.70
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.70
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi350x.c4308"
 
 [gpu.mi355x]
@@ -1698,8 +1699,8 @@ vram_gb = 288
 mem_bw_gb_s = 8189.999999999999
 fp16_tflops = 629.1
 tdp_w = 1400
-decode_eff = 0.70
-prefill_eff = 0.45
+llamacpp_decode_eff = 0.70
+llamacpp_prefill_eff = 0.45
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi355x.c4309"
 
 [gpu.mi300a]
@@ -1710,8 +1711,8 @@ vram_gb = 192
 mem_bw_gb_s = 10300
 fp16_tflops = 653.7
 tdp_w = 750
-decode_eff = 0.68
-prefill_eff = 0.42
+llamacpp_decode_eff = 0.68
+llamacpp_prefill_eff = 0.42
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi300a.c4296"
 
 [gpu.mi300x]
@@ -1722,8 +1723,8 @@ vram_gb = 192
 mem_bw_gb_s = 10300
 fp16_tflops = 653.7
 tdp_w = 750
-decode_eff = 0.68
-prefill_eff = 0.42
+llamacpp_decode_eff = 0.68
+llamacpp_prefill_eff = 0.42
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi300x.c4179"
 
 [gpu.mi308x]
@@ -1734,8 +1735,8 @@ vram_gb = 192
 mem_bw_gb_s = 10300
 fp16_tflops = 653.7
 tdp_w = 750
-decode_eff = 0.68
-prefill_eff = 0.42
+llamacpp_decode_eff = 0.68
+llamacpp_prefill_eff = 0.42
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi308x.c4295"
 
 [gpu.mi250]
@@ -1746,8 +1747,8 @@ vram_gb = 128
 mem_bw_gb_s = 3280
 fp16_tflops = 362.1
 tdp_w = 500
-decode_eff = 0.65
-prefill_eff = 0.38
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.38
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi250.c3847"
 
 [gpu.mi250x]
@@ -1758,8 +1759,8 @@ vram_gb = 128
 mem_bw_gb_s = 3280
 fp16_tflops = 383.0
 tdp_w = 500
-decode_eff = 0.65
-prefill_eff = 0.38
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.38
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi250x.c3837"
 
 [gpu.mi300]
@@ -1770,8 +1771,8 @@ vram_gb = 128
 mem_bw_gb_s = 6550
 fp16_tflops = 383.0
 tdp_w = 600
-decode_eff = 0.68
-prefill_eff = 0.42
+llamacpp_decode_eff = 0.68
+llamacpp_prefill_eff = 0.42
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi300.c4019"
 
 [gpu.mi200]
@@ -1782,8 +1783,8 @@ vram_gb = 64
 mem_bw_gb_s = 1640
 fp16_tflops = 181.0
 tdp_w = 300
-decode_eff = 0.65
-prefill_eff = 0.38
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.38
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi200.c4077"
 
 [gpu.mi210]
@@ -1794,8 +1795,8 @@ vram_gb = 64
 mem_bw_gb_s = 1640
 fp16_tflops = 181.0
 tdp_w = 300
-decode_eff = 0.65
-prefill_eff = 0.38
+llamacpp_decode_eff = 0.65
+llamacpp_prefill_eff = 0.38
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi210.c3857"
 
 [gpu.pro_w7800_48_gb]
@@ -1806,8 +1807,8 @@ vram_gb = 48
 mem_bw_gb_s = 864
 fp16_tflops = 90.5
 tdp_w = 281
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-w7800-48-gb.c4252"
 
 [gpu.pro_w7900]
@@ -1818,8 +1819,8 @@ vram_gb = 48
 mem_bw_gb_s = 864
 fp16_tflops = 122.6
 tdp_w = 295
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-w7900.c4147"
 
 [gpu.pro_w7900d]
@@ -1830,8 +1831,8 @@ vram_gb = 48
 mem_bw_gb_s = 864
 fp16_tflops = 106.0
 tdp_w = 295
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-w7900d.c4361"
 
 [gpu.mi60]
@@ -1842,8 +1843,8 @@ vram_gb = 32
 mem_bw_gb_s = 1020
 fp16_tflops = 29.5
 tdp_w = 300
-decode_eff = 0.40
-prefill_eff = 0.18
+llamacpp_decode_eff = 0.40
+llamacpp_prefill_eff = 0.18
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi60.c3233"
 
 [gpu.mi100]
@@ -1854,8 +1855,8 @@ vram_gb = 32
 mem_bw_gb_s = 1230
 fp16_tflops = 184.6
 tdp_w = 300
-decode_eff = 0.60
-prefill_eff = 0.35
+llamacpp_decode_eff = 0.60
+llamacpp_prefill_eff = 0.35
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi100.c3496"
 
 [gpu.pro_v620]
@@ -1866,8 +1867,8 @@ vram_gb = 32
 mem_bw_gb_s = 512
 fp16_tflops = 40.5
 tdp_w = 300
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-v620.c3846"
 
 [gpu.pro_w6800]
@@ -1878,8 +1879,8 @@ vram_gb = 32
 mem_bw_gb_s = 512
 fp16_tflops = 35.7
 tdp_w = 250
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-w6800.c3809"
 
 [gpu.pro_w7800]
@@ -1890,8 +1891,8 @@ vram_gb = 32
 mem_bw_gb_s = 576
 fp16_tflops = 90.5
 tdp_w = 260
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-w7800.c4148"
 
 [gpu.ai_pro_9600d]
@@ -1902,8 +1903,8 @@ vram_gb = 32
 mem_bw_gb_s = 576
 fp16_tflops = 49.6
 tdp_w = 150
-decode_eff = 0.54
-prefill_eff = 0.32
+llamacpp_decode_eff = 0.54
+llamacpp_prefill_eff = 0.32
 source = "https://www.techpowerup.com/gpu-specs/radeon-ai-pro-9600d.c4379"
 
 [gpu.ai_pro_r9700]
@@ -1914,8 +1915,8 @@ vram_gb = 32
 mem_bw_gb_s = 644.6
 fp16_tflops = 95.7
 tdp_w = 300
-decode_eff = 0.54
-prefill_eff = 0.32
+llamacpp_decode_eff = 0.54
+llamacpp_prefill_eff = 0.32
 source = "https://www.techpowerup.com/gpu-specs/radeon-ai-pro-r9700.c4290"
 
 [gpu.ai_pro_r9700s]
@@ -1926,8 +1927,8 @@ vram_gb = 32
 mem_bw_gb_s = 644.6
 fp16_tflops = 95.7
 tdp_w = 300
-decode_eff = 0.54
-prefill_eff = 0.32
+llamacpp_decode_eff = 0.54
+llamacpp_prefill_eff = 0.32
 source = "https://www.techpowerup.com/gpu-specs/radeon-ai-pro-r9700s.c4378"
 
 [gpu.pro_v710]
@@ -1938,8 +1939,8 @@ vram_gb = 28
 mem_bw_gb_s = 504
 fp16_tflops = 55.3
 tdp_w = 158
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-v710.c4234"
 
 [gpu.rx_7900_xtx]
@@ -1950,8 +1951,8 @@ vram_gb = 24
 mem_bw_gb_s = 960
 fp16_tflops = 122.8
 tdp_w = 355
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-7900-xtx.c3941"
 
 [gpu.rx_7900_xt]
@@ -1962,8 +1963,8 @@ vram_gb = 20
 mem_bw_gb_s = 800
 fp16_tflops = 103.0
 tdp_w = 300
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-7900-xt.c3912"
 
 [gpu.mi25]
@@ -1974,8 +1975,8 @@ vram_gb = 16
 mem_bw_gb_s = 436.2
 fp16_tflops = 24.6
 tdp_w = 300
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi25.c2983"
 
 [gpu.mi50]
@@ -1986,8 +1987,8 @@ vram_gb = 16
 mem_bw_gb_s = 1020
 fp16_tflops = 26.8
 tdp_w = 300
-decode_eff = 0.40
-prefill_eff = 0.18
+llamacpp_decode_eff = 0.40
+llamacpp_prefill_eff = 0.18
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi50.c3335"
 
 [gpu.vii]
@@ -1998,8 +1999,8 @@ vram_gb = 16
 mem_bw_gb_s = 1020
 fp16_tflops = 26.9
 tdp_w = 295
-decode_eff = 0.40
-prefill_eff = 0.18
+llamacpp_decode_eff = 0.40
+llamacpp_prefill_eff = 0.18
 source = "https://www.techpowerup.com/gpu-specs/radeon-vii.c3358"
 
 [gpu.rx_6800]
@@ -2010,8 +2011,8 @@ vram_gb = 16
 mem_bw_gb_s = 512
 fp16_tflops = 32.3
 tdp_w = 250
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6800.c3713"
 
 [gpu.rx_6800_xt]
@@ -2022,8 +2023,8 @@ vram_gb = 16
 mem_bw_gb_s = 512
 fp16_tflops = 41.5
 tdp_w = 300
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6800-xt.c3694"
 
 [gpu.rx_6900_xt]
@@ -2034,8 +2035,8 @@ vram_gb = 16
 mem_bw_gb_s = 512
 fp16_tflops = 46.1
 tdp_w = 300
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6900-xt.c3481"
 
 [gpu.rx_6950_xt]
@@ -2046,8 +2047,8 @@ vram_gb = 16
 mem_bw_gb_s = 576
 fp16_tflops = 47.3
 tdp_w = 335
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6950-xt.c3875"
 
 [gpu.pro_w7700]
@@ -2058,8 +2059,8 @@ vram_gb = 16
 mem_bw_gb_s = 576
 fp16_tflops = 63.9
 tdp_w = 190
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-w7700.c4184"
 
 [gpu.rx_7800_xt]
@@ -2070,8 +2071,8 @@ vram_gb = 16
 mem_bw_gb_s = 624.1
 fp16_tflops = 74.7
 tdp_w = 263
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-7800-xt.c3839"
 
 [gpu.rx_7900_gre]
@@ -2082,8 +2083,8 @@ vram_gb = 16
 mem_bw_gb_s = 576
 fp16_tflops = 92.0
 tdp_w = 260
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-7900-gre.c4166"
 
 [gpu.rx_7600_xt]
@@ -2094,8 +2095,8 @@ vram_gb = 16
 mem_bw_gb_s = 288
 fp16_tflops = 45.1
 tdp_w = 190
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-7600-xt.c4190"
 
 [gpu.rx_7700]
@@ -2106,8 +2107,8 @@ vram_gb = 16
 mem_bw_gb_s = 622.1
 fp16_tflops = 53.2
 tdp_w = 200
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-7700.c4159"
 
 [gpu.rx_9060_xt_16_gb]
@@ -2118,8 +2119,8 @@ vram_gb = 16
 mem_bw_gb_s = 322.3
 fp16_tflops = 51.3
 tdp_w = 160
-decode_eff = 0.54
-prefill_eff = 0.32
+llamacpp_decode_eff = 0.54
+llamacpp_prefill_eff = 0.32
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-9060-xt-16-gb.c4293"
 
 [gpu.rx_9070]
@@ -2130,8 +2131,8 @@ vram_gb = 16
 mem_bw_gb_s = 644.6
 fp16_tflops = 72.2
 tdp_w = 220
-decode_eff = 0.54
-prefill_eff = 0.32
+llamacpp_decode_eff = 0.54
+llamacpp_prefill_eff = 0.32
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-9070.c4250"
 
 [gpu.rx_9070_gre_16_gb]
@@ -2142,8 +2143,8 @@ vram_gb = 16
 mem_bw_gb_s = 576
 fp16_tflops = 68.6
 tdp_w = 220
-decode_eff = 0.54
-prefill_eff = 0.32
+llamacpp_decode_eff = 0.54
+llamacpp_prefill_eff = 0.32
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-9070-gre-16-gb.c4343"
 
 [gpu.rx_9070_xt]
@@ -2154,8 +2155,8 @@ vram_gb = 16
 mem_bw_gb_s = 644.6
 fp16_tflops = 97.3
 tdp_w = 304
-decode_eff = 0.54
-prefill_eff = 0.32
+llamacpp_decode_eff = 0.54
+llamacpp_prefill_eff = 0.32
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-9070-xt.c4229"
 
 [gpu.rx_6700_xt]
@@ -2166,8 +2167,8 @@ vram_gb = 12
 mem_bw_gb_s = 384
 fp16_tflops = 26.4
 tdp_w = 230
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6700-xt.c3695"
 
 [gpu.rx_6750_xt]
@@ -2178,8 +2179,8 @@ vram_gb = 12
 mem_bw_gb_s = 432
 fp16_tflops = 26.6
 tdp_w = 250
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6750-xt.c3879"
 
 [gpu.rx_6750_gre_12_gb]
@@ -2190,8 +2191,8 @@ vram_gb = 12
 mem_bw_gb_s = 432
 fp16_tflops = 26.4
 tdp_w = 250
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6750-gre-12-gb.c4183"
 
 [gpu.rx_7700_xt]
@@ -2202,8 +2203,8 @@ vram_gb = 12
 mem_bw_gb_s = 432
 fp16_tflops = 70.3
 tdp_w = 245
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-7700-xt.c3911"
 
 [gpu.rx_9070_gre]
@@ -2214,8 +2215,8 @@ vram_gb = 12
 mem_bw_gb_s = 432
 fp16_tflops = 68.6
 tdp_w = 220
-decode_eff = 0.54
-prefill_eff = 0.32
+llamacpp_decode_eff = 0.54
+llamacpp_prefill_eff = 0.32
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-9070-gre.c4291"
 
 [gpu.rx_6700]
@@ -2226,8 +2227,8 @@ vram_gb = 10
 mem_bw_gb_s = 320
 fp16_tflops = 22.6
 tdp_w = 175
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6700.c3716"
 
 [gpu.rx_6750_gre_10_gb]
@@ -2238,8 +2239,8 @@ vram_gb = 10
 mem_bw_gb_s = 320
 fp16_tflops = 22.6
 tdp_w = 170
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6750-gre-10-gb.c4192"
 
 [gpu.mi6]
@@ -2250,8 +2251,8 @@ vram_gb = 8
 mem_bw_gb_s = 224
 fp16_tflops = 5.7
 tdp_w = 150
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-instinct-mi6.c2927"
 
 [gpu.pro_w5700]
@@ -2262,8 +2263,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 17.3
 tdp_w = 205
-decode_eff = 0.42
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.42
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-w5700.c3466"
 
 [gpu.rx_5700]
@@ -2274,8 +2275,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 15.9
 tdp_w = 180
-decode_eff = 0.42
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.42
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-5700.c3437"
 
 [gpu.rx_5700_xt]
@@ -2286,8 +2287,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 19.5
 tdp_w = 225
-decode_eff = 0.42
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.42
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-5700-xt.c3339"
 
 [gpu.rx_5700_xt_50th_anniversary]
@@ -2298,8 +2299,8 @@ vram_gb = 8
 mem_bw_gb_s = 448
 fp16_tflops = 20.3
 tdp_w = 225
-decode_eff = 0.42
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.42
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-5700-xt-50th-anniversary.c3438"
 
 [gpu.pro_v520]
@@ -2310,8 +2311,8 @@ vram_gb = 8
 mem_bw_gb_s = 512
 fp16_tflops = 14.8
 tdp_w = 225
-decode_eff = 0.42
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.42
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-v520.c3755"
 
 [gpu.pro_w5500]
@@ -2322,8 +2323,8 @@ vram_gb = 8
 mem_bw_gb_s = 224
 fp16_tflops = 10.4
 tdp_w = 125
-decode_eff = 0.42
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.42
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-w5500.c3479"
 
 [gpu.pro_w6600]
@@ -2334,8 +2335,8 @@ vram_gb = 8
 mem_bw_gb_s = 224
 fp16_tflops = 18.5
 tdp_w = 100
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-w6600.c3818"
 
 [gpu.rx_6600]
@@ -2346,8 +2347,8 @@ vram_gb = 8
 mem_bw_gb_s = 224
 fp16_tflops = 17.9
 tdp_w = 132
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6600.c3696"
 
 [gpu.rx_6600_xt]
@@ -2358,8 +2359,8 @@ vram_gb = 8
 mem_bw_gb_s = 256
 fp16_tflops = 21.2
 tdp_w = 160
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6600-xt.c3774"
 
 [gpu.rx_6650_xt]
@@ -2370,8 +2371,8 @@ vram_gb = 8
 mem_bw_gb_s = 280.3
 fp16_tflops = 21.6
 tdp_w = 176
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6650-xt.c3898"
 
 [gpu.pro_w7500]
@@ -2382,8 +2383,8 @@ vram_gb = 8
 mem_bw_gb_s = 256
 fp16_tflops = 24.4
 tdp_w = 70
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-w7500.c4170"
 
 [gpu.pro_w7600]
@@ -2394,8 +2395,8 @@ vram_gb = 8
 mem_bw_gb_s = 288
 fp16_tflops = 40.0
 tdp_w = 130
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-pro-w7600.c4169"
 
 [gpu.rx_6600_le]
@@ -2406,8 +2407,8 @@ vram_gb = 8
 mem_bw_gb_s = 224
 fp16_tflops = 17.9
 tdp_w = 132
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-6600-le.c4223"
 
 [gpu.rx_7600]
@@ -2418,8 +2419,8 @@ vram_gb = 8
 mem_bw_gb_s = 288
 fp16_tflops = 43.5
 tdp_w = 165
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-7600.c4153"
 
 [gpu.rx_7400]
@@ -2430,8 +2431,8 @@ vram_gb = 8
 mem_bw_gb_s = 288
 fp16_tflops = 33.0
 tdp_w = 43
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-7400.c4328"
 
 [gpu.rx_7650_gre]
@@ -2442,8 +2443,8 @@ vram_gb = 8
 mem_bw_gb_s = 288
 fp16_tflops = 44.1
 tdp_w = 165
-decode_eff = 0.50
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.50
+llamacpp_prefill_eff = 0.28
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-7650-gre.c4258"
 
 [gpu.rx_9060]
@@ -2454,8 +2455,8 @@ vram_gb = 8
 mem_bw_gb_s = 322.3
 fp16_tflops = 42.9
 tdp_w = 132
-decode_eff = 0.54
-prefill_eff = 0.32
+llamacpp_decode_eff = 0.54
+llamacpp_prefill_eff = 0.32
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-9060.c4326"
 
 [gpu.rx_9060_xt_8_gb]
@@ -2466,8 +2467,8 @@ vram_gb = 8
 mem_bw_gb_s = 322.3
 fp16_tflops = 51.3
 tdp_w = 150
-decode_eff = 0.54
-prefill_eff = 0.32
+llamacpp_decode_eff = 0.54
+llamacpp_prefill_eff = 0.32
 source = "https://www.techpowerup.com/gpu-specs/radeon-rx-9060-xt-8-gb.c4251"
 
 # ── Intel (7 GPUs) ──
@@ -2480,8 +2481,8 @@ vram_gb = 24
 mem_bw_gb_s = 456
 fp16_tflops = 24.6
 tdp_w = 200
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/arc-pro-b60.c4350"
 
 [gpu.arc_a770]
@@ -2492,8 +2493,8 @@ vram_gb = 16
 mem_bw_gb_s = 512
 fp16_tflops = 39.3
 tdp_w = 225
-decode_eff = 0.40
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.40
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/arc-a770.c3914"
 
 [gpu.arc_pro_b50]
@@ -2504,8 +2505,8 @@ vram_gb = 16
 mem_bw_gb_s = 224
 fp16_tflops = 21.3
 tdp_w = 70
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/arc-pro-b50.c4345"
 
 [gpu.arc_b580]
@@ -2516,8 +2517,8 @@ vram_gb = 12
 mem_bw_gb_s = 456
 fp16_tflops = 27.3
 tdp_w = 190
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/arc-b580.c4244"
 
 [gpu.arc_b570]
@@ -2528,8 +2529,8 @@ vram_gb = 10
 mem_bw_gb_s = 380
 fp16_tflops = 23.0
 tdp_w = 150
-decode_eff = 0.45
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.22
 source = "https://www.techpowerup.com/gpu-specs/arc-b570.c4245"
 
 [gpu.arc_a750]
@@ -2540,8 +2541,8 @@ vram_gb = 8
 mem_bw_gb_s = 512
 fp16_tflops = 34.4
 tdp_w = 225
-decode_eff = 0.40
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.40
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/arc-a750.c3929"
 
 [gpu.arc_a580]
@@ -2552,8 +2553,8 @@ vram_gb = 8
 mem_bw_gb_s = 512
 fp16_tflops = 24.6
 tdp_w = 175
-decode_eff = 0.40
-prefill_eff = 0.20
+llamacpp_decode_eff = 0.40
+llamacpp_prefill_eff = 0.20
 source = "https://www.techpowerup.com/gpu-specs/arc-a580.c3928"
 
 # ── Apple Silicon (8 entries, manual) ──
@@ -2567,8 +2568,10 @@ mem_bw_gb_s = 546
 fp16_tflops = 53.5
 tdp_w = 75
 street_usd = 4999
-decode_eff = 0.60
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.20
+mlx_decode_eff = 0.60
+mlx_prefill_eff = 0.28
 
 [gpu.m4_max_64]
 name = "M4 Max 64GB"
@@ -2579,8 +2582,10 @@ mem_bw_gb_s = 546
 fp16_tflops = 53.5
 tdp_w = 75
 street_usd = 2999
-decode_eff = 0.60
-prefill_eff = 0.28
+llamacpp_decode_eff = 0.45
+llamacpp_prefill_eff = 0.20
+mlx_decode_eff = 0.60
+mlx_prefill_eff = 0.28
 
 [gpu.m4_pro_48]
 name = "M4 Pro 48GB"
@@ -2591,8 +2596,10 @@ mem_bw_gb_s = 273
 fp16_tflops = 22.1
 tdp_w = 45
 street_usd = 1999
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.44
+llamacpp_prefill_eff = 0.18
+mlx_decode_eff = 0.58
+mlx_prefill_eff = 0.25
 
 [gpu.m4_pro_24]
 name = "M4 Pro 24GB"
@@ -2603,8 +2610,10 @@ mem_bw_gb_s = 273
 fp16_tflops = 22.1
 tdp_w = 45
 street_usd = 1599
-decode_eff = 0.58
-prefill_eff = 0.25
+llamacpp_decode_eff = 0.44
+llamacpp_prefill_eff = 0.18
+mlx_decode_eff = 0.58
+mlx_prefill_eff = 0.25
 
 [gpu.m3_max_128]
 name = "M3 Max 128GB"
@@ -2615,8 +2624,10 @@ mem_bw_gb_s = 400
 fp16_tflops = 45.2
 tdp_w = 75
 street_usd = 4499
-decode_eff = 0.57
-prefill_eff = 0.26
+llamacpp_decode_eff = 0.43
+llamacpp_prefill_eff = 0.18
+mlx_decode_eff = 0.57
+mlx_prefill_eff = 0.26
 
 [gpu.m2_ultra_192]
 name = "M2 Ultra 192GB"
@@ -2627,8 +2638,10 @@ mem_bw_gb_s = 800
 fp16_tflops = 27.2
 tdp_w = 120
 street_usd = 6999
-decode_eff = 0.55
-prefill_eff = 0.24
+llamacpp_decode_eff = 0.42
+llamacpp_prefill_eff = 0.17
+mlx_decode_eff = 0.55
+mlx_prefill_eff = 0.24
 
 [gpu.m2_ultra_128]
 name = "M2 Ultra 128GB"
@@ -2639,8 +2652,10 @@ mem_bw_gb_s = 800
 fp16_tflops = 27.2
 tdp_w = 120
 street_usd = 5499
-decode_eff = 0.55
-prefill_eff = 0.24
+llamacpp_decode_eff = 0.42
+llamacpp_prefill_eff = 0.17
+mlx_decode_eff = 0.55
+mlx_prefill_eff = 0.24
 
 [gpu.m1_ultra_128]
 name = "M1 Ultra 128GB"
@@ -2651,6 +2666,8 @@ mem_bw_gb_s = 800
 fp16_tflops = 21.2
 tdp_w = 120
 street_usd = 3999
-decode_eff = 0.52
-prefill_eff = 0.22
+llamacpp_decode_eff = 0.40
+llamacpp_prefill_eff = 0.16
+mlx_decode_eff = 0.52
+mlx_prefill_eff = 0.22
 

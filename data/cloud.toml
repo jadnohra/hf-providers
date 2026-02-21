@@ -1,0 +1,329 @@
+# Cloud GPU rental pricing registry.
+# Curated from provider pricing pages.
+# Generated: 2026-02-21
+#
+# gpu: references a key in hardware.toml (soft link, not validated at parse time)
+# price_hr: on-demand USD/hr per GPU (community/marketplace tier where applicable)
+# spot_hr: spot/interruptible pricing (optional)
+# interconnect: multi-GPU link type (optional, "nvlink" or "pcie")
+
+# ── Lambda ──
+
+[cloud.lambda_b200_sxm_1x]
+name = "Lambda 1x B200 SXM"
+provider = "lambda"
+gpu = "b200"
+gpu_count = 1
+price_hr = 6.08
+region = ["US"]
+url = "https://lambda.ai/pricing"
+
+[cloud.lambda_b200_sxm_8x]
+name = "Lambda 8x B200 SXM"
+provider = "lambda"
+gpu = "b200"
+gpu_count = 8
+price_hr = 5.74
+interconnect = "nvlink"
+region = ["US"]
+url = "https://lambda.ai/pricing"
+
+[cloud.lambda_h100_sxm_1x]
+name = "Lambda 1x H100 SXM"
+provider = "lambda"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 3.78
+region = ["US"]
+url = "https://lambda.ai/pricing"
+
+[cloud.lambda_h100_sxm_2x]
+name = "Lambda 2x H100 SXM"
+provider = "lambda"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 2
+price_hr = 3.67
+interconnect = "nvlink"
+region = ["US"]
+url = "https://lambda.ai/pricing"
+
+[cloud.lambda_h100_sxm_4x]
+name = "Lambda 4x H100 SXM"
+provider = "lambda"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 4
+price_hr = 3.55
+interconnect = "nvlink"
+region = ["US"]
+url = "https://lambda.ai/pricing"
+
+[cloud.lambda_h100_sxm_8x]
+name = "Lambda 8x H100 SXM"
+provider = "lambda"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 8
+price_hr = 3.44
+interconnect = "nvlink"
+region = ["US"]
+url = "https://lambda.ai/pricing"
+
+[cloud.lambda_h100_pcie_1x]
+name = "Lambda 1x H100 PCIe"
+provider = "lambda"
+gpu = "h100_pcie_80_gb"
+gpu_count = 1
+price_hr = 2.86
+region = ["US"]
+url = "https://lambda.ai/pricing"
+
+[cloud.lambda_gh200_1x]
+name = "Lambda 1x GH200"
+provider = "lambda"
+gpu = "h200_sxm_141_gb"
+gpu_count = 1
+price_hr = 1.99
+region = ["US"]
+url = "https://lambda.ai/pricing"
+
+[cloud.lambda_a100_sxm_80_1x]
+name = "Lambda 1x A100 SXM 40GB"
+provider = "lambda"
+gpu = "a100_sxm4_40_gb"
+gpu_count = 1
+price_hr = 1.48
+region = ["US"]
+url = "https://lambda.ai/pricing"
+
+[cloud.lambda_a100_sxm_8x]
+name = "Lambda 8x A100 SXM 80GB"
+provider = "lambda"
+gpu = "a100_sxm4_80_gb"
+gpu_count = 8
+price_hr = 2.06
+interconnect = "nvlink"
+region = ["US"]
+url = "https://lambda.ai/pricing"
+
+[cloud.lambda_a6000_1x]
+name = "Lambda 1x A6000"
+provider = "lambda"
+gpu = "rtx_a6000"
+gpu_count = 1
+price_hr = 0.92
+region = ["US"]
+url = "https://lambda.ai/pricing"
+
+[cloud.lambda_a10_1x]
+name = "Lambda 1x A10"
+provider = "lambda"
+gpu = "a10_pcie"
+gpu_count = 1
+price_hr = 0.86
+region = ["US"]
+url = "https://lambda.ai/pricing"
+
+# ── RunPod (community cloud pricing) ──
+
+[cloud.runpod_b200_1x]
+name = "RunPod 1x B200"
+provider = "runpod"
+gpu = "b200"
+gpu_count = 1
+price_hr = 5.98
+region = ["US", "EU"]
+url = "https://www.runpod.io/pricing"
+
+[cloud.runpod_h200_1x]
+name = "RunPod 1x H200"
+provider = "runpod"
+gpu = "h200_sxm_141_gb"
+gpu_count = 1
+price_hr = 3.59
+region = ["US", "EU"]
+url = "https://www.runpod.io/pricing"
+
+[cloud.runpod_h100_sxm_1x]
+name = "RunPod 1x H100 SXM"
+provider = "runpod"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 1.50
+region = ["US", "EU"]
+url = "https://www.runpod.io/pricing"
+
+[cloud.runpod_h100_pcie_1x]
+name = "RunPod 1x H100 PCIe"
+provider = "runpod"
+gpu = "h100_pcie_80_gb"
+gpu_count = 1
+price_hr = 1.35
+region = ["US", "EU"]
+url = "https://www.runpod.io/pricing"
+
+[cloud.runpod_a100_sxm_1x]
+name = "RunPod 1x A100 SXM 80GB"
+provider = "runpod"
+gpu = "a100_sxm4_80_gb"
+gpu_count = 1
+price_hr = 0.79
+region = ["US", "EU"]
+url = "https://www.runpod.io/pricing"
+
+[cloud.runpod_a100_pcie_1x]
+name = "RunPod 1x A100 PCIe 40GB"
+provider = "runpod"
+gpu = "a100_pcie_40_gb"
+gpu_count = 1
+price_hr = 0.60
+region = ["US", "EU"]
+url = "https://www.runpod.io/pricing"
+
+[cloud.runpod_a40_1x]
+name = "RunPod 1x A40"
+provider = "runpod"
+gpu = "a40_pcie"
+gpu_count = 1
+price_hr = 0.40
+region = ["US", "EU"]
+url = "https://www.runpod.io/pricing"
+
+[cloud.runpod_rtx_a6000_1x]
+name = "RunPod 1x RTX A6000"
+provider = "runpod"
+gpu = "rtx_a6000"
+gpu_count = 1
+price_hr = 0.25
+region = ["US", "EU"]
+url = "https://www.runpod.io/pricing"
+
+[cloud.runpod_rtx_4090_1x]
+name = "RunPod 1x RTX 4090"
+provider = "runpod"
+gpu = "rtx_4090"
+gpu_count = 1
+price_hr = 0.20
+region = ["US", "EU"]
+url = "https://www.runpod.io/pricing"
+
+[cloud.runpod_rtx_3090_1x]
+name = "RunPod 1x RTX 3090"
+provider = "runpod"
+gpu = "rtx_3090"
+gpu_count = 1
+price_hr = 0.11
+region = ["US", "EU"]
+url = "https://www.runpod.io/pricing"
+
+# ── Vast.ai (marketplace median pricing) ──
+
+[cloud.vastai_b200_1x]
+name = "Vast.ai 1x B200"
+provider = "vast.ai"
+gpu = "b200"
+gpu_count = 1
+price_hr = 2.67
+region = ["US", "EU", "APAC"]
+url = "https://vast.ai/pricing"
+
+[cloud.vastai_h200_1x]
+name = "Vast.ai 1x H200"
+provider = "vast.ai"
+gpu = "h200_sxm_141_gb"
+gpu_count = 1
+price_hr = 1.97
+region = ["US", "EU", "APAC"]
+url = "https://vast.ai/pricing"
+
+[cloud.vastai_h100_1x]
+name = "Vast.ai 1x H100"
+provider = "vast.ai"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 1.55
+region = ["US", "EU", "APAC"]
+url = "https://vast.ai/pricing"
+
+[cloud.vastai_a100_sxm_1x]
+name = "Vast.ai 1x A100 SXM 80GB"
+provider = "vast.ai"
+gpu = "a100_sxm4_80_gb"
+gpu_count = 1
+price_hr = 0.67
+region = ["US", "EU", "APAC"]
+url = "https://vast.ai/pricing"
+
+[cloud.vastai_a100_pcie_1x]
+name = "Vast.ai 1x A100 PCIe 40GB"
+provider = "vast.ai"
+gpu = "a100_pcie_40_gb"
+gpu_count = 1
+price_hr = 0.29
+region = ["US", "EU", "APAC"]
+url = "https://vast.ai/pricing"
+
+[cloud.vastai_rtx_a6000_1x]
+name = "Vast.ai 1x RTX A6000"
+provider = "vast.ai"
+gpu = "rtx_a6000"
+gpu_count = 1
+price_hr = 0.40
+region = ["US", "EU", "APAC"]
+url = "https://vast.ai/pricing"
+
+[cloud.vastai_rtx_4090_1x]
+name = "Vast.ai 1x RTX 4090"
+provider = "vast.ai"
+gpu = "rtx_4090"
+gpu_count = 1
+price_hr = 0.33
+region = ["US", "EU", "APAC"]
+url = "https://vast.ai/pricing"
+
+[cloud.vastai_rtx_3090_1x]
+name = "Vast.ai 1x RTX 3090"
+provider = "vast.ai"
+gpu = "rtx_3090"
+gpu_count = 1
+price_hr = 0.16
+region = ["US", "EU", "APAC"]
+url = "https://vast.ai/pricing"
+
+# ── CoreWeave ──
+
+[cloud.coreweave_h100_sxm_1x]
+name = "CoreWeave 1x H100 SXM"
+provider = "coreweave"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 4.25
+region = ["US"]
+url = "https://www.coreweave.com/pricing"
+
+[cloud.coreweave_a100_sxm_1x]
+name = "CoreWeave 1x A100 SXM 80GB"
+provider = "coreweave"
+gpu = "a100_sxm4_80_gb"
+gpu_count = 1
+price_hr = 2.21
+region = ["US"]
+url = "https://www.coreweave.com/pricing"
+
+# ── Hyperstack ──
+
+[cloud.hyperstack_h100_pcie_1x]
+name = "Hyperstack 1x H100 PCIe"
+provider = "hyperstack"
+gpu = "h100_pcie_80_gb"
+gpu_count = 1
+price_hr = 1.90
+region = ["US", "EU"]
+url = "https://www.hyperstack.cloud/gpu-pricing"
+
+[cloud.hyperstack_h100_sxm_1x]
+name = "Hyperstack 1x H100 SXM"
+provider = "hyperstack"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 2.40
+region = ["US", "EU"]
+url = "https://www.hyperstack.cloud/gpu-pricing"
