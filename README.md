@@ -4,7 +4,7 @@ Search Hugging Face inference providers, estimate GPU performance, compare costs
 
 Three things this tool does:
 
-- **Search** models and providers, browse interactively, get ready-to-use API call code (Python, curl, JS)
+- **Search** models and providers (with automatic variant detection), browse interactively, get ready-to-use API call code (Python, curl, JS)
 - **Estimate** what models fit on a GPU and how fast they'll run
 - **Compare** the cost of API providers vs cloud GPU rental vs local hardware
 
