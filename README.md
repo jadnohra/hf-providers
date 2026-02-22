@@ -4,7 +4,7 @@ Search Hugging Face inference providers, estimate GPU performance, compare costs
 
 Three things this tool does:
 
-- **Search** models and providers, browse interactively, get code snippets
+- **Search** models and providers, browse interactively, get ready-to-use API call code (Python, curl, JS)
 - **Estimate** what models fit on a GPU and how fast they'll run
 - **Compare** the cost of API providers vs cloud GPU rental vs local hardware
 
@@ -26,7 +26,7 @@ cargo install --git https://github.com/jadnohra/hf-providers
 
 ## Search models and providers
 
-Search by name to open an interactive browser where you can expand models into providers, pick a language, and copy code snippets.
+Search by name to open an interactive browser where you can expand models into providers, pick a language (Python, curl, JS), and copy the API call code.
 
 ```
 hf-providers deepseek-r1
@@ -39,9 +39,9 @@ hf-providers                                      # trending models
 
 ![search](assets/search.png)
 
-**Browser keys:** arrow keys or `hjkl` to navigate, right to expand, `c` or Enter to copy snippet, `q` or Esc to quit.
+**Browser keys:** arrow keys or `hjkl` to navigate, right to expand, `c` or Enter to copy, `q` or Esc to quit.
 
-You can also get a snippet directly without opening the browser:
+You can also get the API call code directly without opening the browser:
 
 ```
 hf-providers deepseek-r1@novita                   # python via novita
