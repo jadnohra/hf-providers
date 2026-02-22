@@ -26,9 +26,7 @@ cargo install --git https://github.com/jadnohra/hf-providers
 
 ## Search models and providers
 
-Search by name to open an interactive browser where you can expand models into providers, pick a language (Python, curl, JS), and copy the API call code.
-
-When you search for a model, related variants (different sizes, quantizations, fine-tunes from the same family) are automatically detected and shown in the same tree, so you can compare providers across all of them.
+Search by name to see the full picture for any model: who serves it, what it costs, how fast it is, and how it would run on local hardware.
 
 ```
 hf-providers deepseek-r1
@@ -37,13 +35,29 @@ hf-providers meta-llama/Llama-3.3-70B-Instruct
 hf-providers                                      # trending models
 ```
 
+The detail view for a model shows:
+
+- **Provider table** with live status (hot/warm/cold), input and output pricing per 1M tokens, throughput in tok/s, and whether each provider supports tool use and structured JSON output
+- **Cheapest and fastest** provider summary
+- **Model metadata**: parameter count, weight sizes at Q4/Q8/FP16, library, license, likes, downloads
+- **Local GPU estimates** on 5 reference GPUs (RTX 4090, RTX 5090, M4 Pro, M4 Max, A100) showing quant, weight size, fit, decode tok/s, and prefill tok/s
+- **Variant detection**: related models from the same family (different sizes, quantizations, fine-tunes) are found automatically and shown in the same view
+
+Filter with `--cheapest`, `--fastest`, `--hot` (only live providers), `--tools` (only tool-use providers), or `--json` for machine-readable output.
+
 ![trending](assets/trending.png)
 
 ![search](assets/search.png)
 
-**Browser keys:** arrow keys or `hjkl` to navigate, right to expand, `c` or Enter to copy, `q` or Esc to quit.
+### Interactive browser
 
-You can also get the API call code directly without opening the browser:
+The detail view opens an interactive tree browser where you can expand models into providers, expand providers into language options (Python, curl, JS), preview the API call code inline, and copy it to the clipboard.
+
+**Keys:** arrow keys or `hjkl` to navigate, right to expand, `c` or Enter to copy, `q` or Esc to quit.
+
+### Direct snippets
+
+Get API call code directly without opening the browser:
 
 ```
 hf-providers deepseek-r1@novita                   # python via novita
@@ -53,19 +67,27 @@ hf-providers snippet deepseek-r1 --cheapest       # cheapest provider
 hf-providers snippet deepseek-r1 --fastest        # fastest provider
 ```
 
-To browse providers or monitor live status across all of them:
+### Browse providers and live status
 
 ```
-hf-providers providers                            # list all
-hf-providers providers groq                       # models on groq
+hf-providers providers                            # list all providers with type
+hf-providers providers groq                       # models available on groq
 hf-providers providers nebius --task image         # filter by task
-hf-providers status deepseek-r1                   # live status
+hf-providers status deepseek-r1                   # live readiness + TTFT latency
 hf-providers status deepseek-r1 --watch 5         # auto-refresh every 5s
 ```
 
+`providers` lists all inference providers and whether they run on serverless GPUs or HF CPU. Drill into a provider to see its models, filterable by task.
+
+`status` shows live readiness (hot/warm/cold/unavailable) and time-to-first-token latency for each provider serving a model. With `--watch`, it refreshes on a loop.
+
 ## GPU estimation
 
-`hf-providers machine` shows which models fit on a given GPU, grouped into comfortable (>=30 tok/s), tight, or won't run. It supports NVIDIA, AMD, Intel, and Apple Silicon, and GPU names are fuzzy-matched so you don't need the exact key.
+`hf-providers machine` answers "what can this GPU run?" It tests 10 reference models (4B to 671B) against the GPU and groups them into three categories:
+
+- **comfortable**: fits in VRAM and decodes at 30+ tok/s
+- **tight**: fits but decodes below 30 tok/s
+- **won't run**: doesn't fit even at Q4
 
 ```
 hf-providers machine rtx4090                      # reference models on RTX 4090
@@ -74,11 +96,17 @@ hf-providers machine h100                         # H100
 hf-providers machine rtx4090 deepseek-r1          # specific model on a GPU
 ```
 
-Apple Silicon shows estimates for both mlx and llama.cpp runtimes.
+The header shows GPU specs (VRAM, memory bandwidth, FP16 TFLOPS, TDP), street price, and estimated monthly electricity cost.
+
+Each model row shows the best quantization that fits, estimated decode tok/s, and prefill tok/s. Apple Silicon GPUs show estimates for both mlx and llama.cpp runtimes.
+
+With a specific model argument, it shows a detailed per-runtime breakdown with quant, weight size, fit status, decode, and prefill.
+
+GPU names are fuzzy-matched: `4090`, `rtx4090`, `rtx-4090`, and `rtx_4090` all find the same GPU. 220+ GPUs in the database covering NVIDIA, AMD, Intel, and Apple Silicon.
 
 ## Cost comparison
 
-`hf-providers need` compares the cost of running a model across three options: API providers (pay per token), cloud GPU rental (pay per hour), and local hardware (upfront cost plus electricity). All costs are normalized to $/1M output tokens so you can compare them directly.
+`hf-providers need` compares three ways to run a model, all normalized to $/1M output tokens:
 
 ```
 hf-providers need llama-3.3-70b
@@ -86,7 +114,13 @@ hf-providers need deepseek-r1
 hf-providers need gemma-3-4b
 ```
 
-Cloud and local costs assume full utilization, so they represent the best-case floor. The local GPU section also includes a payback estimate showing how many tokens you'd need to generate before the hardware pays for itself relative to the cheapest API option.
+It shows three sections:
+
+- **API providers**: live status, input/output pricing per 1M tokens, sorted by output cost
+- **Cloud GPU rental**: 50+ offerings across 5 providers, showing $/hr, best quant, estimated tok/s, and effective $/1M output tokens at full utilization
+- **Local GPU**: street price, best quant, estimated tok/s, electricity-only $/1M output tokens ($0.12/kWh, 80% TDP), and a payback estimate showing how many tokens until the hardware pays for itself vs the cheapest API option
+
+Cloud and local costs assume continuous generation at full speed, so they represent the floor. Real costs will be higher if the GPU sits idle.
 
 ## Keeping data fresh
 
