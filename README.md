@@ -28,6 +28,8 @@ cargo install --git https://github.com/jadnohra/hf-providers
 
 Search by name to open an interactive browser where you can expand models into providers, pick a language (Python, curl, JS), and copy the API call code.
 
+When you search for a model, related variants (different sizes, quantizations, fine-tunes from the same family) are automatically detected and shown in the same tree, so you can compare providers across all of them.
+
 ```
 hf-providers deepseek-r1
 hf-providers flux.1-dev
