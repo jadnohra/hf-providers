@@ -6,6 +6,7 @@ use comfy_table::{presets, Cell, Color, ContentArrangement, Table};
 use console::{Key, Style, Term};
 use hf_providers_core::{
     api::{parse_model, HfClient},
+    cloud,
     estimate::{self, Fit},
     hardware::{self, Runtime},
     model::Model,
@@ -71,6 +72,7 @@ fn fmt_count(n: u64) -> String {
         hf-providers providers groq\n  \
         hf-providers snippet deepseek-r1\n  \
         hf-providers machine rtx4090            (what can this GPU run?)\n  \
+        hf-providers need llama-3.3-70b         (API vs cloud vs local cost)\n  \
         hf-providers                             (trending models)"
 )]
 struct Cli {
@@ -128,6 +130,11 @@ enum Commands {
         /// Optional model to evaluate, e.g. deepseek-r1 or meta-llama/Llama-3.3-70B-Instruct
         model: Option<String>,
     },
+    /// Compare costs: API vs cloud GPU vs local GPU
+    Need {
+        /// Model to analyze, e.g. deepseek-r1 or meta-llama/Llama-3.3-70B-Instruct
+        model: String,
+    },
 }
 
 #[tokio::main]
@@ -153,6 +160,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Some(Commands::Machine { gpu, model }) => {
             cmd_machine(&client, &gpu, model.as_deref()).await?;
+        }
+        Some(Commands::Need { model }) => {
+            cmd_need(&client, &model).await?;
         }
         None => {
             if let Some(ref raw) = cli.query {
@@ -852,6 +862,347 @@ async fn cmd_machine(client: &HfClient, input: &str, model_query: Option<&str>) 
         "{}",
         s_hint().apply_to(format!("  gpu key: {key}   estimates: {rt_label}"))
     );
+    println!();
+
+    Ok(())
+}
+
+// ── Need ─────────────────────────────────────────────────────────────
+
+/// Effective cost per 1M output tokens given $/hr and decode tok/s.
+fn cost_per_m(price_hr: f64, tok_s: f64) -> f64 {
+    price_hr / tok_s / 3600.0 * 1_000_000.0
+}
+
+fn fmt_cost(v: f64) -> String {
+    if v >= 100.0 {
+        format!("${:.0}", v)
+    } else if v >= 1.0 {
+        format!("${:.2}", v)
+    } else {
+        format!("${:.3}", v)
+    }
+}
+
+async fn cmd_need(client: &HfClient, query: &str) -> anyhow::Result<()> {
+    // 1. Resolve model.
+    let term = Term::stderr();
+    term.write_line(&format!("{}", s_dim().apply_to("resolving model...")))?;
+
+    let model = match client.model_info(query).await {
+        Ok(data) => parse_model(&data),
+        Err(_) => {
+            let results = client.search_models(query, 5).await?;
+            results.iter().find_map(parse_model)
+        }
+    };
+    term.clear_last_lines(1)?;
+
+    let model = model.ok_or_else(|| anyhow::anyhow!("model not found: {query}"))?;
+    let params = model
+        .estimated_params()
+        .or_else(|| {
+            REFERENCE_MODELS
+                .iter()
+                .find(|rm| rm.id == model.id)
+                .map(|rm| rm.params)
+        })
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "cannot determine param count for {}\n  \
+                 try a model with known size, e.g. hf-providers need llama-3.3-70b",
+                model.id
+            )
+        })?;
+
+    let short = model.id.rsplit('/').next().unwrap_or(&model.id);
+    let weight_q4 = params as f64 * 0.5 / 1e9;
+
+    // Header.
+    println!();
+    println!(
+        "  {}  {}  {}",
+        s_header().apply_to(short),
+        s_param().apply_to(Model::fmt_params(params)),
+        s_dim().apply_to(format!("Q4 = {:.0} GB", weight_q4)),
+    );
+
+    // ── API providers ────────────────────────────────────────────────
+    let api_providers: Vec<&ProviderInfo> = model
+        .providers
+        .iter()
+        .filter(|p| p.output_price_per_m.is_some())
+        .collect();
+
+    let cheapest_api_out = api_providers
+        .iter()
+        .filter_map(|p| p.output_price_per_m)
+        .fold(f64::INFINITY, f64::min);
+
+    if !api_providers.is_empty() {
+        println!();
+        println!("  {}", s_header().apply_to("api providers"));
+        println!("  {}", sep(48));
+
+        let mut table = Table::new();
+        table.load_preset(presets::NOTHING);
+        table.set_content_arrangement(ContentArrangement::Dynamic);
+        table.set_header(vec![
+            Cell::new("  Provider").fg(Color::AnsiValue(243)),
+            Cell::new("Status").fg(Color::AnsiValue(243)),
+            Cell::new("$/1M in").fg(Color::AnsiValue(243)),
+            Cell::new("$/1M out").fg(Color::AnsiValue(243)),
+        ]);
+
+        let mut sorted: Vec<&&ProviderInfo> = api_providers.iter().collect();
+        sorted.sort_by(|a, b| {
+            a.output_price_per_m
+                .unwrap()
+                .partial_cmp(&b.output_price_per_m.unwrap())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        for p in &sorted {
+            let in_price = p
+                .input_price_per_m
+                .map(fmt_cost)
+                .unwrap_or_else(|| "\u{2500}".to_string());
+            let out_price = fmt_cost(p.output_price_per_m.unwrap());
+            let rd = p.readiness();
+            table.add_row(vec![
+                Cell::new(format!("  {}", p.name)).fg(Color::AnsiValue(252)),
+                Cell::new(readiness_str(rd)),
+                Cell::new(&in_price).fg(Color::AnsiValue(109)),
+                Cell::new(&out_price).fg(Color::AnsiValue(109)),
+            ]);
+        }
+        println!("{table}");
+    } else {
+        println!();
+        println!(
+            "  {}",
+            s_dim().apply_to("no api providers with pricing found")
+        );
+    }
+
+    // ── Cloud GPU ────────────────────────────────────────────────────
+    let gpus = hardware::load_bundled_hardware()?;
+    let offerings = cloud::load_bundled_cloud()?;
+
+    struct CloudRow {
+        name: String,
+        provider: String,
+        gpu_count: u32,
+        total_hr: f64,
+        quant: String,
+        tok_s: f64,
+        eff_cost: f64,
+    }
+
+    let mut cloud_rows: Vec<CloudRow> = Vec::new();
+
+    for (_key, offering) in &offerings {
+        let gpu = match gpus.iter().find(|(k, _)| *k == offering.gpu) {
+            Some((_, g)) => g,
+            None => continue,
+        };
+
+        let result = if offering.gpu_count > 1 {
+            estimate::best_quant_multi_gpu(gpu, params, Runtime::LlamaCpp, offering.gpu_count)
+        } else {
+            estimate::best_quant(gpu, params, Runtime::LlamaCpp)
+        };
+
+        if let Some((q, est)) = result {
+            let tok_s = est.decode_tok_s.unwrap_or(0.0);
+            if tok_s <= 0.0 {
+                continue;
+            }
+            let total_hr = offering.price_hr * offering.gpu_count as f64;
+            let eff = cost_per_m(total_hr, tok_s);
+            cloud_rows.push(CloudRow {
+                name: offering.name.clone(),
+                provider: offering.provider.clone(),
+                gpu_count: offering.gpu_count,
+                total_hr,
+                quant: q.label().to_string(),
+                tok_s,
+                eff_cost: eff,
+            });
+        }
+    }
+
+    cloud_rows.sort_by(|a, b| a.eff_cost.partial_cmp(&b.eff_cost).unwrap());
+
+    if !cloud_rows.is_empty() {
+        println!();
+        println!(
+            "  {}",
+            s_header().apply_to("cloud gpu rental")
+        );
+        println!(
+            "  {}",
+            s_dim().apply_to("floor cost at 100% utilization")
+        );
+        println!("  {}", sep(60));
+
+        let mut table = Table::new();
+        table.load_preset(presets::NOTHING);
+        table.set_content_arrangement(ContentArrangement::Dynamic);
+        table.set_header(vec![
+            Cell::new("  Offering").fg(Color::AnsiValue(243)),
+            Cell::new("$/hr").fg(Color::AnsiValue(243)),
+            Cell::new("Quant").fg(Color::AnsiValue(243)),
+            Cell::new("tok/s").fg(Color::AnsiValue(243)),
+            Cell::new("$/1M out").fg(Color::AnsiValue(243)),
+        ]);
+
+        for r in cloud_rows.iter().take(10) {
+            let gpu_label = if r.gpu_count > 1 {
+                format!("{}x {}", r.gpu_count, r.name)
+            } else {
+                r.name.clone()
+            };
+            let label = format!("{} ({})", gpu_label, r.provider);
+            table.add_row(vec![
+                Cell::new(format!("  {label}")).fg(Color::AnsiValue(252)),
+                Cell::new(format!("${:.2}", r.total_hr)).fg(Color::AnsiValue(109)),
+                Cell::new(&r.quant).fg(Color::AnsiValue(248)),
+                Cell::new(format!("{:.0}", r.tok_s)).fg(Color::AnsiValue(248)),
+                Cell::new(fmt_cost(r.eff_cost)).fg(Color::AnsiValue(109)),
+            ]);
+        }
+        println!("{table}");
+    }
+
+    // ── Local GPU ────────────────────────────────────────────────────
+    struct LocalRow {
+        name: String,
+        street: Option<u32>,
+        quant: String,
+        tok_s: f64,
+        eff_cost: f64,
+        payback_m_tok: Option<f64>,
+    }
+
+    let elec_kwh = 0.12_f64;
+    let load_pct = 0.80_f64;
+
+    let mut local_rows: Vec<LocalRow> = Vec::new();
+
+    for (_key, gpu) in &gpus {
+        for &rt in &gpu.available_runtimes() {
+            if let Some((q, est)) = estimate::best_quant(gpu, params, rt) {
+                let tok_s = est.decode_tok_s.unwrap_or(0.0);
+                if tok_s <= 0.0 {
+                    continue;
+                }
+                let elec_hr = gpu.tdp_w as f64 * load_pct * elec_kwh / 1000.0;
+                let eff = cost_per_m(elec_hr, tok_s);
+
+                let payback = gpu.street_usd.and_then(|usd| {
+                    if cheapest_api_out.is_finite() && eff < cheapest_api_out {
+                        let saving_per_m = cheapest_api_out - eff;
+                        Some(usd as f64 / saving_per_m)
+                    } else {
+                        None
+                    }
+                });
+
+                // Deduplicate: keep best runtime per GPU name.
+                if let Some(existing) = local_rows.iter_mut().find(|r| r.name == gpu.name) {
+                    if tok_s > existing.tok_s {
+                        existing.quant = q.label().to_string();
+                        existing.tok_s = tok_s;
+                        existing.eff_cost = eff;
+                        existing.payback_m_tok = payback;
+                    }
+                    continue;
+                }
+
+                local_rows.push(LocalRow {
+                    name: gpu.name.clone(),
+                    street: gpu.street_usd,
+                    quant: q.label().to_string(),
+                    tok_s,
+                    eff_cost: eff,
+                    payback_m_tok: payback,
+                });
+            }
+        }
+    }
+
+    local_rows.sort_by(|a, b| a.eff_cost.partial_cmp(&b.eff_cost).unwrap());
+
+    // Show only GPUs with street price + Apple Silicon, top 8.
+    let local_display: Vec<&LocalRow> = local_rows
+        .iter()
+        .filter(|r| r.street.is_some())
+        .take(8)
+        .collect();
+
+    if !local_display.is_empty() {
+        println!();
+        println!(
+            "  {}",
+            s_header().apply_to("local gpu")
+        );
+        println!(
+            "  {}",
+            s_dim().apply_to("marginal electricity only, $0.12/kWh, 80% TDP")
+        );
+        println!("  {}", sep(64));
+
+        let mut table = Table::new();
+        table.load_preset(presets::NOTHING);
+        table.set_content_arrangement(ContentArrangement::Dynamic);
+        table.set_header(vec![
+            Cell::new("  GPU").fg(Color::AnsiValue(243)),
+            Cell::new("Street").fg(Color::AnsiValue(243)),
+            Cell::new("Quant").fg(Color::AnsiValue(243)),
+            Cell::new("tok/s").fg(Color::AnsiValue(243)),
+            Cell::new("$/1M out").fg(Color::AnsiValue(243)),
+            Cell::new("payback").fg(Color::AnsiValue(243)),
+        ]);
+
+        for r in &local_display {
+            let street_str = r
+                .street
+                .map(|v| format!("${v}"))
+                .unwrap_or_else(|| "\u{2500}".to_string());
+            let payback_str = r
+                .payback_m_tok
+                .map(|v| {
+                    if v >= 1000.0 {
+                        format!("{:.1}B tok", v / 1000.0)
+                    } else {
+                        format!("{:.0}M tok", v)
+                    }
+                })
+                .unwrap_or_else(|| "\u{2500}".to_string());
+            table.add_row(vec![
+                Cell::new(format!("  {}", r.name)).fg(Color::AnsiValue(252)),
+                Cell::new(&street_str).fg(Color::AnsiValue(109)),
+                Cell::new(&r.quant).fg(Color::AnsiValue(248)),
+                Cell::new(format!("{:.0}", r.tok_s)).fg(Color::AnsiValue(248)),
+                Cell::new(fmt_cost(r.eff_cost)).fg(Color::AnsiValue(109)),
+                Cell::new(&payback_str).fg(Color::AnsiValue(248)),
+            ]);
+        }
+        println!("{table}");
+    }
+
+    // Footer.
+    println!();
+    if cheapest_api_out.is_finite() {
+        println!(
+            "{}",
+            s_hint().apply_to(format!(
+                "  payback = street price / (cheapest API ${:.2}/1M - local $/1M)",
+                cheapest_api_out
+            ))
+        );
+    }
     println!();
 
     Ok(())

@@ -92,6 +92,72 @@ pub fn estimate(gpu: &GpuSpec, params: u64, quant: Quant, runtime: Runtime) -> E
     }
 }
 
+/// Estimate performance on a multi-GPU setup (e.g. cloud 8×H100).
+/// Scales VRAM linearly for fit check and throughput linearly (tensor parallelism).
+pub fn estimate_multi_gpu(
+    gpu: &GpuSpec,
+    params: u64,
+    quant: Quant,
+    runtime: Runtime,
+    gpu_count: u32,
+) -> Estimate {
+    let weight_gb = params as f64 * quant.bytes_per_param() / 1e9;
+    let usable_vram = gpu.vram_gb * gpu_count as f64 * (1.0 - VRAM_OVERHEAD);
+
+    let fit = if weight_gb <= usable_vram {
+        Fit::Full
+    } else {
+        Fit::NoFit
+    };
+
+    let n = gpu_count as f64;
+    let decode_eff = gpu.decode_eff(runtime);
+    let prefill_eff = gpu.prefill_eff(runtime);
+
+    let decode_tok_s = match &fit {
+        Fit::NoFit => None,
+        Fit::Full => {
+            let tok_s = gpu.mem_bw_gb_s * decode_eff * n / weight_gb;
+            Some(tok_s)
+        }
+    };
+
+    let prefill_tok_s = match &fit {
+        Fit::NoFit => None,
+        Fit::Full => {
+            let params_f = params as f64;
+            let tok_s = gpu.fp16_tflops * 1e12 * prefill_eff * n / (2.0 * params_f);
+            Some(tok_s)
+        }
+    };
+
+    Estimate {
+        gpu_key: String::new(),
+        gpu_name: gpu.name.clone(),
+        quant,
+        weight_gb,
+        fit,
+        decode_tok_s,
+        prefill_tok_s,
+    }
+}
+
+/// Pick the best quantization for a multi-GPU setup.
+pub fn best_quant_multi_gpu(
+    gpu: &GpuSpec,
+    params: u64,
+    runtime: Runtime,
+    gpu_count: u32,
+) -> Option<(Quant, Estimate)> {
+    for q in [Quant::Q4, Quant::Q8, Quant::FP16] {
+        let est = estimate_multi_gpu(gpu, params, q, runtime, gpu_count);
+        if est.fit == Fit::Full {
+            return Some((q, est));
+        }
+    }
+    None
+}
+
 /// Pick the best quantization level that fits a GPU for a given model.
 /// Tries Q4 first, then Q8, then FP16.
 pub fn best_quant(gpu: &GpuSpec, params: u64, runtime: Runtime) -> Option<(Quant, Estimate)> {

@@ -41,6 +41,14 @@ hf-providers providers
 # Live status with auto-refresh
 hf-providers status deepseek-r1 --watch 5
 
+# What can this GPU run?
+hf-providers machine rtx4090
+hf-providers machine m4-max-128
+hf-providers machine h100 deepseek-r1
+
+# Compare costs: API vs cloud vs local
+hf-providers need llama-3.3-70b
+
 # Trending models (default, no args)
 hf-providers
 ```
