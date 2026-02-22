@@ -135,6 +135,8 @@ enum Commands {
         /// Model to analyze, e.g. deepseek-r1 or meta-llama/Llama-3.3-70B-Instruct
         model: String,
     },
+    /// Update GPU and cloud pricing data from GitHub
+    Sync,
 }
 
 #[tokio::main]
@@ -163,6 +165,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Some(Commands::Need { model }) => {
             cmd_need(&client, &model).await?;
+        }
+        Some(Commands::Sync) => {
+            cmd_sync().await?;
         }
         None => {
             if let Some(ref raw) = cli.query {
@@ -594,7 +599,7 @@ async fn cmd_status(
 // ── Machine ──────────────────────────────────────────────────────────
 
 async fn cmd_machine(client: &HfClient, input: &str, model_query: Option<&str>) -> anyhow::Result<()> {
-    let gpus = hardware::load_bundled_hardware()?;
+    let gpus = hardware::load_hardware_cached()?;
     let (key, gpu) = hardware::find_gpu(&gpus, input)
         .ok_or_else(|| anyhow::anyhow!("no GPU matching '{input}' in hardware database"))?;
 
@@ -986,8 +991,8 @@ async fn cmd_need(client: &HfClient, query: &str) -> anyhow::Result<()> {
     }
 
     // ── Cloud GPU ────────────────────────────────────────────────────
-    let gpus = hardware::load_bundled_hardware()?;
-    let offerings = cloud::load_bundled_cloud()?;
+    let gpus = hardware::load_hardware_cached()?;
+    let offerings = cloud::load_cloud_cached()?;
 
     struct CloudRow {
         name: String,
@@ -1398,7 +1403,7 @@ fn print_model_full(model: &Model, _variants: &[Model], opts: &Cli) {
     // ── Local estimates ──
 
     if let Some(params) = model.estimated_params() {
-        if let Ok(gpus) = hardware::load_bundled_hardware() {
+        if let Ok(gpus) = hardware::load_hardware_cached() {
             struct EstRow {
                 gpu_name: String,
                 rt_label: String,
@@ -2110,4 +2115,35 @@ fn extract_core_name(model_id: &str) -> String {
         }
     }
     core
+}
+
+// ── Sync ─────────────────────────────────────────────────────────────
+
+async fn cmd_sync() -> anyhow::Result<()> {
+    let term = Term::stderr();
+    term.write_line(&format!("{}", s_dim().apply_to("downloading latest data...")))?;
+
+    let result = hf_providers_core::sync::sync_data().await?;
+
+    term.clear_last_lines(1)?;
+    println!();
+    println!(
+        "  {}",
+        s_hot().apply_to("synced")
+    );
+    println!(
+        "  {}",
+        s_dim().apply_to(format!(
+            "hardware.toml: {} GPUs   cloud.toml: {} offerings",
+            result.hardware_count, result.cloud_count
+        ))
+    );
+    if let Some(dir) = hf_providers_core::cache::cache_dir() {
+        println!(
+            "  {}",
+            s_hint().apply_to(format!("cached in {}", dir.display()))
+        );
+    }
+    println!();
+    Ok(())
 }

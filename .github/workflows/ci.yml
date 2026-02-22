@@ -31,6 +31,10 @@ jobs:
       - name: cargo test
         run: cargo test --workspace
 
+      - name: integration tests (network)
+        if: github.event_name == 'push'
+        run: cargo test --workspace -- --ignored
+
       - name: build release
         run: cargo build --release
 

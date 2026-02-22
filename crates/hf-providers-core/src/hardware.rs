@@ -91,6 +91,18 @@ pub fn load_bundled_hardware() -> Result<Vec<(String, GpuSpec)>> {
     parse_hardware(toml_str)
 }
 
+/// Load hardware data: cached file if available, otherwise bundled.
+pub fn load_hardware_cached() -> Result<Vec<(String, GpuSpec)>> {
+    if let Some(path) = crate::cache::cache_path("hardware.toml") {
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            if let Ok(parsed) = parse_hardware(&content) {
+                return Ok(parsed);
+            }
+        }
+    }
+    load_bundled_hardware()
+}
+
 /// Find a GPU by user input like "4090", "rtx4090", "m4-max", "h100".
 /// Normalizes input, then tries exact match, suffix match, substring match.
 /// Also tries matching with underscores stripped so "rtx4090" finds "rtx_4090".

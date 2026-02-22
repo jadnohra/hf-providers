@@ -47,6 +47,18 @@ pub fn load_bundled_cloud() -> Result<Vec<(String, CloudOffering)>> {
     parse_cloud(toml_str)
 }
 
+/// Load cloud data: cached file if available, otherwise bundled.
+pub fn load_cloud_cached() -> Result<Vec<(String, CloudOffering)>> {
+    if let Some(path) = crate::cache::cache_path("cloud.toml") {
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            if let Ok(parsed) = parse_cloud(&content) {
+                return Ok(parsed);
+            }
+        }
+    }
+    load_bundled_cloud()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
