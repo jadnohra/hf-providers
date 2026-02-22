@@ -10,7 +10,7 @@ Three things this tool does:
 
 Data: provider info comes live from the Hugging Face API. GPU specs (220+) and cloud pricing (50+ offerings) are bundled and can be updated with `hf-providers sync`.
 
-<img src="assets/demo.gif" width="50%">
+<p align="center"><img src="assets/demo.gif" width="50%"></p>
 
 ## Install
 
