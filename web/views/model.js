@@ -45,7 +45,34 @@ export function render(container, match) {
 }
 
 function renderModel(container, model) {
-  const params = model.safetensorsParams;
+  let params = model.safetensorsParams;
+  // Fallback chain: cached exact match → related model in cache → paramHint from name
+  if (!params && state.models) {
+    const cached = state.models.find(m => m.id === model.id);
+    if (cached?.safetensors?.total) params = cached.safetensors.total;
+  }
+  if (!params && state.models) {
+    // Search for a related model (same org, similar name) that has params
+    const org = model.id.split('/')[0];
+    const baseName = model.id.split('/').pop().replace(/-Instruct$|-it$|-Chat$|-GGUF$/, '');
+    for (const m of state.models) {
+      if (m.safetensors?.total && m.id.startsWith(org + '/') && m.id.includes(baseName)) {
+        params = m.safetensors.total;
+        break;
+      }
+    }
+  }
+  if (!params) {
+    const hint = wasm.paramHint(model.id.split('/').pop());
+    if (hint) {
+      const hm = String(hint).match(/([0-9.]+)/);
+      if (hm) {
+        const n = parseFloat(hm[1]);
+        if (hint.includes('B') || hint.includes('b')) params = n * 1e9;
+        else if (hint.includes('M') || hint.includes('m')) params = n * 1e6;
+      }
+    }
+  }
   let html = '';
 
   // Model title
@@ -76,11 +103,21 @@ function renderModel(container, model) {
   // Hardware estimation cards
   if (params) {
     html += renderHardwareCards(model, params);
+  } else {
+    html += `<div class="sec">
+      <div class="sec-head"><span class="sec-q">What can my hardware run?</span><div class="sec-line"></div></div>
+      <div style="color:var(--dm);font-size:11px">No parameter count available for this model</div>
+    </div>`;
   }
 
   // Cost comparison
   if (params) {
     html += renderCostComparison(model, params);
+  } else {
+    html += `<div class="sec">
+      <div class="sec-head"><span class="sec-q">What's the cheapest way to run it?</span><div class="sec-line"></div></div>
+      <div style="color:var(--dm);font-size:11px">No parameter count available for this model</div>
+    </div>`;
   }
 
   // Provider chips section ("What does a provider serve?")

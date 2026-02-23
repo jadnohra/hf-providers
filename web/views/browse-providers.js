@@ -28,9 +28,10 @@ const PROVIDERS = [
 ];
 
 export function render(container) {
-  let html = `<div style="margin-bottom:16px">
+  let html = `<div style="margin-bottom:12px;display:flex;align-items:center;gap:12px">
     <span style="font-size:16px;font-weight:800">All providers</span>
-    <span style="font-size:11px;color:var(--dm);margin-left:8px">${PROVIDERS.length} inference providers</span>
+    <span style="font-size:11px;color:var(--dm)">${PROVIDERS.length} inference providers</span>
+    <input class="search" id="filter-prov" placeholder="Filter..." autocomplete="off" style="margin-left:auto;padding:5px 10px;font-size:11px;max-width:200px">
   </div>`;
 
   html += `<table class="mt" id="prov-table">
@@ -52,9 +53,9 @@ export function render(container) {
   container.innerHTML = html;
 
   wireSort(container.querySelector('#prov-table'));
+  wireFilter(container);
 
   if (state.models) {
-    // Compute counts from pre-cached data
     for (const p of PROVIDERS) {
       const count = state.models.filter(m =>
         Array.isArray(m.inferenceProviderMapping) &&
@@ -64,7 +65,6 @@ export function render(container) {
       if (td) td.textContent = String(count);
     }
   } else {
-    // Fall back to API calls
     for (const p of PROVIDERS) {
       api.modelsByProvider(p.id, 200).then(results => {
         const td = container.querySelector(`.prov-count[data-id="${p.id}"]`);
@@ -75,6 +75,20 @@ export function render(container) {
       });
     }
   }
+}
+
+function wireFilter(container) {
+  const input = container.querySelector('#filter-prov');
+  const table = container.querySelector('#prov-table');
+  if (!input || !table) return;
+
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase();
+    table.querySelectorAll('tbody tr').forEach(row => {
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(q) ? '' : 'none';
+    });
+  });
 }
 
 function esc(s) {

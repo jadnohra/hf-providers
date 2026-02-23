@@ -26,9 +26,10 @@ export function render(container) {
 }
 
 function renderTable(container, models) {
-  let html = `<div style="margin-bottom:16px">
+  let html = `<div style="margin-bottom:12px;display:flex;align-items:center;gap:12px">
     <span style="font-size:16px;font-weight:800">All models with providers</span>
-    <span style="font-size:11px;color:var(--dm);margin-left:8px">${models.length} models</span>
+    <span style="font-size:11px;color:var(--dm)">${models.length} models</span>
+    <input class="search" id="filter-models" placeholder="Filter..." autocomplete="off" style="margin-left:auto;padding:5px 10px;font-size:11px;max-width:200px">
   </div>`;
 
   html += `<table class="mt" id="models-table">
@@ -59,6 +60,21 @@ function renderTable(container, models) {
   container.innerHTML = html;
 
   wireSort(container.querySelector('#models-table'));
+  wireFilter(container, '#filter-models', '#models-table');
+}
+
+function wireFilter(container, inputSel, tableSel) {
+  const input = container.querySelector(inputSel);
+  const table = container.querySelector(tableSel);
+  if (!input || !table) return;
+
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase();
+    table.querySelectorAll('tbody tr').forEach(row => {
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(q) ? '' : 'none';
+    });
+  });
 }
 
 function esc(s) {

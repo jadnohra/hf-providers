@@ -1,11 +1,10 @@
-// Provider detail view: header, comparison chips, unified model table.
+// Provider detail view: header (clickable to switch), comparison chips, unified model table.
 // Uses pre-cached state.models when available, falls back to API.
-// Click a comparison chip to compare; click again to unselect.
+// Click title to switch provider. Click comparison chip to compare; click again to unselect.
 
 import * as api from '../lib/hf-api.js';
 import { parseModel, readiness } from '../lib/parse.js';
 import { wireSort } from '../lib/sort.js';
-import { tip, providerTip } from '../lib/tips.js';
 import { state } from '../app.js';
 
 const PROVIDERS = [
@@ -51,7 +50,6 @@ export function render(container, match) {
       if (prov) rows.push({ model: m, prov });
     }
 
-    // Providers that share at least one model
     const overlapping = new Set();
     for (const { model } of rows) {
       for (const p of model.providers) {
@@ -69,9 +67,12 @@ export function render(container, match) {
 
     let html = '';
 
-    // Header
+    // Header (clickable title to switch provider)
     html += `<div class="prov-header">
-      <div><div class="prov-title">${esc(displayName)}</div></div>
+      <div style="position:relative">
+        <div class="prov-title" id="prov-switch" style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px;text-decoration-color:var(--dm)">${esc(displayName)} <span style="font-size:11px;color:var(--dm)">\u25be</span></div>
+        <div class="dd" id="prov-switch-dd" style="position:absolute;left:0;top:100%;min-width:240px;z-index:100;max-height:360px;overflow-y:auto"></div>
+      </div>
       <div class="prov-stats">
         <div class="ps-item"><div class="ps-val">${rows.length}</div><div class="ps-label">Models</div></div>
         <div class="ps-item"><div class="ps-val">${hotCount}</div><div class="ps-label">Hot</div></div>
@@ -100,6 +101,7 @@ export function render(container, match) {
 
     container.innerHTML = html;
 
+    wireProviderSwitch(container, providerId);
     renderSingleTable(container, displayName, rows);
     wireCompare(container, providerId, displayName, rows);
   }).catch(err => {
@@ -109,6 +111,53 @@ export function render(container, match) {
 
   return () => { cancelled = true; };
 }
+
+// ── Provider switcher dropdown ──
+
+function wireProviderSwitch(container, currentId) {
+  const title = container.querySelector('#prov-switch');
+  const dd = container.querySelector('#prov-switch-dd');
+  if (!title || !dd) return;
+
+  title.addEventListener('click', e => {
+    e.stopPropagation();
+    if (dd.classList.contains('open')) {
+      dd.classList.remove('open');
+      return;
+    }
+
+    let html = '';
+    for (const p of PROVIDERS) {
+      const isCurrent = p.id === currentId;
+      const style = isCurrent ? 'font-weight:700' : '';
+      html += `<div class="dd-item" data-id="${esc(p.id)}" style="cursor:pointer;${style}">
+        <div class="dd-name">${esc(p.name)}</div>
+      </div>`;
+    }
+    dd.innerHTML = html;
+    dd.classList.add('open');
+
+    dd.querySelectorAll('.dd-item').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        dd.querySelectorAll('.dd-item').forEach(x => x.classList.remove('hl'));
+        el.classList.add('hl');
+      });
+      el.addEventListener('click', ev => {
+        ev.stopPropagation();
+        dd.classList.remove('open');
+        window.location.hash = '#/provider/' + el.dataset.id;
+      });
+    });
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#prov-switch') && !e.target.closest('#prov-switch-dd')) {
+      dd.classList.remove('open');
+    }
+  });
+}
+
+// ── Single provider table ──
 
 function renderSingleTable(container, displayName, rows) {
   const sec = container.querySelector('#model-table-sec');
@@ -140,6 +189,8 @@ function renderSingleTable(container, displayName, rows) {
   wireSort(sec.querySelector('#prov-table'));
 }
 
+// ── Comparison ──
+
 function wireCompare(container, providerId, displayName, rows) {
   const chips = container.querySelectorAll('.compare-pick');
   const sec = container.querySelector('#model-table-sec');
@@ -153,7 +204,6 @@ function wireCompare(container, providerId, displayName, rows) {
     chip.addEventListener('click', async () => {
       const wasSelected = chip.classList.contains('selected');
 
-      // Clear all selections
       chips.forEach(c => {
         c.style.borderColor = '';
         c.style.background = '';
@@ -161,12 +211,10 @@ function wireCompare(container, providerId, displayName, rows) {
       });
 
       if (wasSelected) {
-        // Unselect: restore single-provider view
         renderSingleTable(container, displayName, rows);
         return;
       }
 
-      // Select this chip
       chip.classList.add('selected');
       chip.style.borderColor = 'var(--ac)';
       chip.style.background = 'var(--ac-s)';
@@ -215,20 +263,20 @@ function wireCompare(container, providerId, displayName, rows) {
           <tbody>`;
 
         if (both.length) {
-          html += `<tr class="group-row"><td colspan="5">Both providers · ${both.length} model${both.length !== 1 ? 's' : ''}</td></tr>`;
+          html += `<tr class="group-row"><td colspan="5">Both providers \u00b7 ${both.length} model${both.length !== 1 ? 's' : ''}</td></tr>`;
           for (const { model, a, b } of both) html += compareRow(model, a, b);
         }
         if (onlyA.length) {
-          html += `<tr class="group-row"><td colspan="5">Only on ${esc(displayName)} · ${onlyA.length}</td></tr>`;
+          html += `<tr class="group-row"><td colspan="5">Only on ${esc(displayName)} \u00b7 ${onlyA.length}</td></tr>`;
           for (const { model, a } of onlyA) html += compareRow(model, a, null);
         }
         if (onlyB.length) {
-          html += `<tr class="group-row"><td colspan="5">Only on ${esc(otherName)} · ${onlyB.length}</td></tr>`;
+          html += `<tr class="group-row"><td colspan="5">Only on ${esc(otherName)} \u00b7 ${onlyB.length}</td></tr>`;
           for (const { model, b } of onlyB) html += compareRow(model, null, b);
         }
 
         html += '</tbody></table>';
-        html += `<div style="font-size:9px;color:var(--dm);margin-top:6px">${both.length + onlyA.length + onlyB.length} total · ${both.length} shared · ${onlyA.length} only ${esc(displayName)} · ${onlyB.length} only ${esc(otherName)}</div>`;
+        html += `<div style="font-size:9px;color:var(--dm);margin-top:6px">${both.length + onlyA.length + onlyB.length} total \u00b7 ${both.length} shared \u00b7 ${onlyA.length} only ${esc(displayName)} \u00b7 ${onlyB.length} only ${esc(otherName)}</div>`;
 
         sec.innerHTML = html;
         wireSort(sec.querySelector('#prov-table'));

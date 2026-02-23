@@ -6,9 +6,10 @@ import { render as renderModel } from './model.js';
 import { state } from '../app.js';
 
 export function render(container) {
-  // Use cached top model if available
+  // Use cached top model that has params (so hardware cards + cost comparison render)
   if (state.models && state.models.length) {
-    const modelId = state.models[0].id;
+    const withParams = state.models.find(m => m.safetensors?.total);
+    const modelId = (withParams || state.models[0]).id;
     return renderModel(container, [null, modelId]);
   }
 
