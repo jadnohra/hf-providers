@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <b>Many inference providers serve Hugging Face models. Which one should you use?</b><br>
+  <b>Compare API providers, local GPUs, and cloud for any model</b><br>
   <a href="https://vram.run"><b>Try it in the browser</b></a> &nbsp;|&nbsp; <code>brew install jadnohra/tap/hf-providers</code>
 </p>
 

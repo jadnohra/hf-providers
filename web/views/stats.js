@@ -1,8 +1,8 @@
 // Fun Stats page: superlatives computed from cached data.
+// Layout: head-to-head pairs, record cards, hardware cards, hero card.
 
 import { parseModel } from '../lib/parse.js';
 import * as wasm from '../lib/wasm.js';
-import { wireSort } from '../lib/sort.js';
 import { state } from '../app.js';
 
 export function render(container) {
@@ -14,75 +14,62 @@ export function render(container) {
   const models = state.models.map(parseModel).filter(Boolean);
   const gpus = state.hardware || [];
   const cloud = state.cloud || [];
-  const rows = [];
+
+  // ── Collect data ──
+
+  const pairs = [];
+  const records = [];
+  const hwCards = [];
+  let heroCard = null;
+  const extras = [];
 
   // ── Model superlatives ──
 
-  // Fastest inference
+  // Fastest / slowest inference (pair)
   {
-    let best = null;
+    let fastest = null, slowest = null;
     for (const m of models) {
       for (const p of m.providers) {
-        if (p.status === 'live' && p.throughput != null && (!best || p.throughput > best.tok)) {
-          best = { model: m.id, provider: p.name, tok: p.throughput };
+        if (p.status === 'live' && p.throughput != null) {
+          if (!fastest || p.throughput > fastest.tok)
+            fastest = { model: m.id, provider: p.name, tok: p.throughput };
+          if (p.throughput > 0 && (!slowest || p.throughput < slowest.tok))
+            slowest = { model: m.id, provider: p.name, tok: p.throughput };
         }
       }
     }
-    if (best) {
-      rows.push(row('Fastest inference', shortId(best.model),
-        `${Math.round(best.tok)} tok/s via ${best.provider}`,
-        '#/model/' + best.model));
+    if (fastest && slowest) {
+      const mul = slowest.tok > 0 ? Math.round(fastest.tok / slowest.tok) : 0;
+      pairs.push({
+        category: 'Inference Speed', color: '#10b981',
+        best: { label: 'Fastest', value: fmtNum(Math.round(fastest.tok)), unit: 'tok/s', model: shortId(fastest.model), detail: fastest.provider, href: '#/model/' + fastest.model },
+        worst: { label: 'Slowest', value: fmtNum(Math.round(slowest.tok)), unit: 'tok/s', model: shortId(slowest.model), detail: slowest.provider, href: '#/model/' + slowest.model },
+        multiplier: mul + '\u00d7',
+      });
     }
   }
 
-  // Slowest inference
+  // Cheapest / priciest inference (pair)
   {
-    let worst = null;
+    let cheapest = null, priciest = null;
     for (const m of models) {
       for (const p of m.providers) {
-        if (p.status === 'live' && p.throughput != null && p.throughput > 0 && (!worst || p.throughput < worst.tok)) {
-          worst = { model: m.id, provider: p.name, tok: p.throughput };
+        if (p.status === 'live' && p.outputPrice != null && p.outputPrice > 0) {
+          if (!cheapest || p.outputPrice < cheapest.price)
+            cheapest = { model: m.id, provider: p.name, price: p.outputPrice };
+          if (!priciest || p.outputPrice > priciest.price)
+            priciest = { model: m.id, provider: p.name, price: p.outputPrice };
         }
       }
     }
-    if (worst) {
-      rows.push(row('Slowest inference', shortId(worst.model),
-        `${Math.round(worst.tok)} tok/s via ${worst.provider}`,
-        '#/model/' + worst.model, 'worst'));
-    }
-  }
-
-  // Cheapest inference
-  {
-    let best = null;
-    for (const m of models) {
-      for (const p of m.providers) {
-        if (p.status === 'live' && p.outputPrice != null && p.outputPrice > 0 && (!best || p.outputPrice < best.price)) {
-          best = { model: m.id, provider: p.name, price: p.outputPrice };
-        }
-      }
-    }
-    if (best) {
-      rows.push(row('Cheapest inference', shortId(best.model),
-        `$${best.price.toFixed(2)}/1M out via ${best.provider}`,
-        '#/model/' + best.model));
-    }
-  }
-
-  // Priciest inference
-  {
-    let worst = null;
-    for (const m of models) {
-      for (const p of m.providers) {
-        if (p.status === 'live' && p.outputPrice != null && p.outputPrice > 0 && (!worst || p.outputPrice > worst.price)) {
-          worst = { model: m.id, provider: p.name, price: p.outputPrice };
-        }
-      }
-    }
-    if (worst) {
-      rows.push(row('Priciest inference', shortId(worst.model),
-        `$${worst.price.toFixed(2)}/1M out via ${worst.provider}`,
-        '#/model/' + worst.model, 'worst'));
+    if (cheapest && priciest) {
+      const mul = cheapest.price > 0 ? Math.round(priciest.price / cheapest.price) : 0;
+      pairs.push({
+        category: 'Inference Price', color: '#f59e0b',
+        best: { label: 'Cheapest', value: '$' + cheapest.price.toFixed(2), unit: '/1M out', model: shortId(cheapest.model), detail: cheapest.provider, href: '#/model/' + cheapest.model },
+        worst: { label: 'Priciest', value: '$' + priciest.price.toFixed(2), unit: '/1M out', model: shortId(priciest.model), detail: priciest.provider, href: '#/model/' + priciest.model },
+        multiplier: mul + '\u00d7',
+      });
     }
   }
 
@@ -91,15 +78,9 @@ export function render(container) {
     let best = null;
     for (const m of models) {
       const live = m.providers.filter(p => p.status === 'live').length;
-      if (!best || live > best.count) {
-        best = { model: m.id, count: live };
-      }
+      if (!best || live > best.count) best = { model: m.id, count: live };
     }
-    if (best) {
-      rows.push(row('Most providers', shortId(best.model),
-        `${best.count} live providers`,
-        '#/model/' + best.model));
-    }
+    if (best) records.push(card('\ud83c\udfc6', 'Most providers', best.count + ' live', shortId(best.model), '#f0fdf4', '#/model/' + best.model));
   }
 
   // Largest served model
@@ -108,62 +89,30 @@ export function render(container) {
     for (const m of models) {
       if (!m.safetensorsParams) continue;
       const live = m.providers.some(p => p.status === 'live');
-      if (live && (!best || m.safetensorsParams > best.params)) {
+      if (live && (!best || m.safetensorsParams > best.params))
         best = { model: m.id, params: m.safetensorsParams };
-      }
     }
-    if (best) {
-      rows.push(row('Largest served', shortId(best.model),
-        `${fmtP(best.params)} parameters`,
-        '#/model/' + best.model));
-    }
+    if (best) records.push(card('\ud83d\udc0b', 'Largest served', fmtP(best.params) + ' params', shortId(best.model), '#eff6ff', '#/model/' + best.model));
   }
 
   // Most liked
   {
     let best = null;
     for (const m of models) {
-      if (m.likes > 0 && (!best || m.likes > best.likes)) {
+      if (m.likes > 0 && (!best || m.likes > best.likes))
         best = { model: m.id, likes: m.likes };
-      }
     }
-    if (best) {
-      rows.push(row('Most liked', shortId(best.model),
-        `${fmtNum(best.likes)} likes`,
-        '#/model/' + best.model));
-    }
-  }
-
-  // Least liked (with providers)
-  {
-    let worst = null;
-    for (const m of models) {
-      const live = m.providers.some(p => p.status === 'live');
-      if (!live) continue;
-      if (!worst || m.likes < worst.likes) {
-        worst = { model: m.id, likes: m.likes };
-      }
-    }
-    if (worst) {
-      rows.push(row('Least liked', shortId(worst.model),
-        `${fmtNum(worst.likes)} likes (but has providers!)`,
-        '#/model/' + worst.model, 'worst'));
-    }
+    if (best) records.push(card('\u2764\ufe0f', 'Most liked', fmtNum(best.likes) + ' likes', shortId(best.model), '#fef2f2', '#/model/' + best.model));
   }
 
   // Most downloaded
   {
     let best = null;
     for (const m of models) {
-      if (m.downloads > 0 && (!best || m.downloads > best.downloads)) {
+      if (m.downloads > 0 && (!best || m.downloads > best.downloads))
         best = { model: m.id, downloads: m.downloads };
-      }
     }
-    if (best) {
-      rows.push(row('Most downloaded', shortId(best.model),
-        `${fmtNum(best.downloads)} downloads`,
-        '#/model/' + best.model));
-    }
+    if (best) records.push(card('\ud83d\udce6', 'Most downloaded', fmtNum(best.downloads), shortId(best.model), '#fefce8', '#/model/' + best.model));
   }
 
   // Most variants
@@ -185,31 +134,20 @@ export function render(container) {
         const oName = other.id.split('/').slice(1).join('/');
         if (QUANT_RE.test(oName)) continue;
         const oBase = oName.replace(SUFFIXES, '');
-        if (oBase === baseName || baseName.startsWith(oBase + '-') || oBase.startsWith(baseName + '-')) {
-          count++;
-        }
+        if (oBase === baseName || baseName.startsWith(oBase + '-') || oBase.startsWith(baseName + '-')) count++;
       }
-      if (!best || count > best.count) {
-        best = { model: m.id, count };
-      }
+      if (!best || count > best.count) best = { model: m.id, count };
     }
-    if (best && best.count > 0) {
-      rows.push(row('Most variants', shortId(best.model),
-        `${best.count} related models`,
-        '#/model/' + best.model));
-    }
+    if (best && best.count > 0) records.push(card('\ud83c\udf3f', 'Most variants', best.count + ' related', shortId(best.model), '#f0fdf4', '#/model/' + best.model));
   }
 
-  // ── Provider superlatives ──
-
+  // Provider superlatives
   {
     const provStats = new Map();
     for (const m of models) {
       for (const p of m.providers) {
         if (p.status !== 'live') continue;
-        if (!provStats.has(p.name)) {
-          provStats.set(p.name, { count: 0, maxTok: 0, prices: [] });
-        }
+        if (!provStats.has(p.name)) provStats.set(p.name, { count: 0, maxTok: 0, prices: [] });
         const s = provStats.get(p.name);
         s.count++;
         if (p.throughput != null && p.throughput > s.maxTok) s.maxTok = p.throughput;
@@ -220,44 +158,63 @@ export function render(container) {
     // Biggest catalog
     let biggestProv = null;
     for (const [name, s] of provStats) {
-      if (!biggestProv || s.count > biggestProv.count) {
-        biggestProv = { name, count: s.count };
-      }
+      if (!biggestProv || s.count > biggestProv.count) biggestProv = { name, count: s.count };
     }
-    if (biggestProv) {
-      rows.push(row('Biggest catalog', biggestProv.name,
-        `${biggestProv.count} live models`,
-        '#/provider/' + biggestProv.name));
-    }
+    if (biggestProv) records.push(card('\ud83d\udcda', 'Biggest catalog', biggestProv.count + ' models', biggestProv.name, '#eff6ff', '#/provider/' + biggestProv.name));
 
     // Speed king
     let fastestProv = null;
     for (const [name, s] of provStats) {
-      if (s.maxTok > 0 && (!fastestProv || s.maxTok > fastestProv.tok)) {
-        fastestProv = { name, tok: s.maxTok };
-      }
+      if (s.maxTok > 0 && (!fastestProv || s.maxTok > fastestProv.tok)) fastestProv = { name, tok: s.maxTok };
     }
-    if (fastestProv) {
-      rows.push(row('Speed king', fastestProv.name,
-        `${Math.round(fastestProv.tok)} tok/s peak`,
-        '#/provider/' + fastestProv.name));
-    }
+    if (fastestProv) records.push(card('\u26a1', 'Speed king', fmtNum(Math.round(fastestProv.tok)) + ' tok/s', fastestProv.name, '#fefce8', '#/provider/' + fastestProv.name));
 
     // Budget pick
     let cheapestProv = null;
     for (const [name, s] of provStats) {
       if (s.prices.length > 0) {
         const avg = s.prices.reduce((a, b) => a + b, 0) / s.prices.length;
-        if (!cheapestProv || avg < cheapestProv.avg) {
-          cheapestProv = { name, avg };
-        }
+        if (!cheapestProv || avg < cheapestProv.avg) cheapestProv = { name, avg };
       }
     }
-    if (cheapestProv) {
-      rows.push(row('Budget pick', cheapestProv.name,
-        `$${cheapestProv.avg.toFixed(2)}/1M avg output`,
-        '#/provider/' + cheapestProv.name));
+    if (cheapestProv) records.push(card('\ud83d\udcb0', 'Budget pick', '$' + cheapestProv.avg.toFixed(2) + '/1M avg', cheapestProv.name, '#f0fdf4', '#/provider/' + cheapestProv.name));
+  }
+
+  // Least liked (with providers)
+  {
+    let worst = null;
+    for (const m of models) {
+      const live = m.providers.some(p => p.status === 'live');
+      if (!live) continue;
+      if (!worst || m.likes < worst.likes) worst = { model: m.id, likes: m.likes };
     }
+    if (worst) records.push(card('\ud83d\udc94', 'Least liked', fmtNum(worst.likes) + ' likes', shortId(worst.model), '#fef2f2', '#/model/' + worst.model));
+  }
+
+  // Most versatile
+  {
+    let best = null;
+    for (const m of models) {
+      const tasks = new Set();
+      for (const p of m.providers) {
+        if (p.status === 'live' && p.task) tasks.add(p.task);
+      }
+      if (tasks.size > 0 && (!best || tasks.size > best.count))
+        best = { model: m.id, count: tasks.size, tasks: [...tasks].join(', ') };
+    }
+    if (best && best.count > 1) records.push(card('\ud83d\udd27', 'Most versatile', best.count + ' tasks', shortId(best.model), '#eff6ff', '#/model/' + best.model));
+  }
+
+  // Smallest served
+  {
+    let smallest = null;
+    for (const m of models) {
+      if (!m.safetensorsParams) continue;
+      const live = m.providers.some(p => p.status === 'live');
+      if (live && (!smallest || m.safetensorsParams < smallest.params))
+        smallest = { model: m.id, params: m.safetensorsParams };
+    }
+    if (smallest) records.push(card('\ud83d\udc1c', 'Smallest served', fmtP(smallest.params) + ' params', shortId(smallest.model), '#fefce8', '#/model/' + smallest.model));
   }
 
   // ── Hardware superlatives ──
@@ -269,22 +226,93 @@ export function render(container) {
       if (!most || gpu.vram_gb > most.vram) most = { key, name: gpu.name, vram: gpu.vram_gb };
       if (!least || gpu.vram_gb < least.vram) least = { key, name: gpu.name, vram: gpu.vram_gb };
     }
-    if (most) rows.push(row('Most VRAM', most.name, `${most.vram} GB`, '#/hw/' + most.key));
-    if (least) rows.push(row('Least VRAM', least.name, `${least.vram} GB`, '#/hw/' + least.key, 'worst'));
+    if (most) hwCards.push(card('\ud83e\udde0', 'Most VRAM', most.vram + ' GB', most.name, '#f5f3ff', '#/hw/' + most.key));
+    if (least) hwCards.push(card('\ud83d\udc1c', 'Least VRAM', least.vram + ' GB', least.name, '#fff7ed', '#/hw/' + least.key));
   }
 
-  // Most / least watts (TDP)
+  // Most bandwidth
+  {
+    let best = null;
+    for (const [key, gpu] of gpus) {
+      if (!best || gpu.mem_bw_gb_s > best.bw) best = { key, name: gpu.name, bw: gpu.mem_bw_gb_s };
+    }
+    if (best) hwCards.push(card('\ud83d\ude80', 'Most bandwidth', fmtNum(Math.round(best.bw)) + ' GB/s', best.name, '#eff6ff', '#/hw/' + best.key));
+  }
+
+  // Best / worst $/GB VRAM
+  {
+    let best = null, worst = null;
+    for (const [key, gpu] of gpus) {
+      if (!gpu.street_usd || !gpu.vram_gb) continue;
+      const ratio = gpu.street_usd / gpu.vram_gb;
+      if (!best || ratio < best.ratio) best = { key, name: gpu.name, ratio, price: gpu.street_usd, vram: gpu.vram_gb };
+      if (!worst || ratio > worst.ratio) worst = { key, name: gpu.name, ratio, price: gpu.street_usd, vram: gpu.vram_gb };
+    }
+    if (best) hwCards.push(card('\ud83d\udcb5', 'Best $/GB VRAM', '$' + Math.round(best.ratio) + '/GB', best.name, '#f0fdf4', '#/hw/' + best.key));
+    if (worst) hwCards.push(card('\ud83d\udcb8', 'Worst $/GB VRAM', '$' + Math.round(worst.ratio) + '/GB', worst.name, '#fef2f2', '#/hw/' + worst.key));
+  }
+
+  // Fits on a laptop?
+  {
+    const m4pro = gpus.find(([k]) => k === 'm4_pro_24');
+    if (m4pro) {
+      const [, gpu] = m4pro;
+      let largest = null;
+      for (const m of models) {
+        if (!m.safetensorsParams) continue;
+        const live = m.providers.some(p => p.status === 'live');
+        if (!live) continue;
+        const result = wasm.bestQuant(gpu, m.safetensorsParams, 'mlx');
+        if (result && result[1].fit === 'Full' && result[1].decode_tok_s > 0) {
+          if (!largest || m.safetensorsParams > largest.params)
+            largest = { model: m.id, params: m.safetensorsParams, tok: result[1].decode_tok_s };
+        }
+      }
+      if (largest) hwCards.push(card('\ud83d\udcbb', 'Fits on a laptop?', fmtP(largest.params) + ' @ ' + Math.round(largest.tok) + ' tok/s', 'M4 Pro 24GB', '#fefce8', '#/hw/m4_pro_24'));
+    }
+  }
+
+  // Power draw (pair)
   {
     let most = null, least = null;
     for (const [key, gpu] of gpus) {
       if (!most || gpu.tdp_w > most.tdp) most = { key, name: gpu.name, tdp: gpu.tdp_w };
       if (!least || gpu.tdp_w < least.tdp) least = { key, name: gpu.name, tdp: gpu.tdp_w };
     }
-    if (most) rows.push(row('Power hungry', most.name, `${most.tdp}W TDP`, '#/hw/' + most.key, 'worst'));
-    if (least) rows.push(row('Most efficient', least.name, `${least.tdp}W TDP`, '#/hw/' + least.key));
+    if (most && least) {
+      const mul = least.tdp > 0 ? Math.round(most.tdp / least.tdp) : 0;
+      pairs.push({
+        category: 'Power Draw', color: '#ef4444',
+        best: { label: 'Most efficient', value: least.tdp + 'W', unit: 'TDP', model: least.name, detail: '', href: '#/hw/' + least.key },
+        worst: { label: 'Power hungry', value: fmtNum(most.tdp) + 'W', unit: 'TDP', model: most.name, detail: '', href: '#/hw/' + most.key },
+        multiplier: mul + '\u00d7',
+      });
+    }
   }
 
-  // Best local value
+  // Cloud GPU pair
+  {
+    let cheapest = null, priciest = null;
+    for (const [, o] of cloud) {
+      const total = o.price_hr * (o.gpu_count || 1);
+      const gpuEntry = gpus.find(([k]) => k === o.gpu);
+      const gpuName = gpuEntry ? gpuEntry[1].name : o.gpu;
+      const entry = { provider: o.provider, gpu: gpuName, price: total };
+      if (!cheapest || total < cheapest.price) cheapest = entry;
+      if (!priciest || total > priciest.price) priciest = entry;
+    }
+    if (cheapest && priciest) {
+      const mul = cheapest.price > 0 ? Math.round(priciest.price / cheapest.price) : 0;
+      pairs.push({
+        category: 'Cloud GPU', color: '#8b5cf6',
+        best: { label: 'Cheapest', value: '$' + cheapest.price.toFixed(2), unit: '/hr', model: cheapest.gpu, detail: cheapest.provider, href: '#/cloud' },
+        worst: { label: 'Priciest', value: '$' + priciest.price.toFixed(2), unit: '/hr', model: priciest.gpu, detail: priciest.provider, href: '#/cloud' },
+        multiplier: mul + '\u00d7',
+      });
+    }
+  }
+
+  // Best local value (hero card)
   {
     const refParams = 8e9;
     const elecRate = 0.15;
@@ -298,38 +326,33 @@ export function render(container) {
         if (result && result[1].decode_tok_s > 0) {
           const costPerM = wasm.costPerMillion((gpu.tdp_w / 1000) * elecRate, result[1].decode_tok_s);
           if (!best || costPerM < best.cost) {
-            best = { key, name: gpu.name, cost: costPerM, tok: result[1].decode_tok_s };
+            best = { key, name: gpu.name, cost: costPerM, tok: result[1].decode_tok_s, vram: gpu.vram_gb, bw: gpu.mem_bw_gb_s };
           }
         }
       }
     }
+
+    // Also find cheapest API for comparison
+    let cheapestApi = null;
+    for (const m of models) {
+      if (!m.safetensorsParams || m.safetensorsParams < 7e9 || m.safetensorsParams > 10e9) continue;
+      for (const p of m.providers) {
+        if (p.status === 'live' && p.outputPrice != null && p.outputPrice > 0) {
+          if (!cheapestApi || p.outputPrice < cheapestApi) cheapestApi = p.outputPrice;
+        }
+      }
+    }
+
     if (best) {
-      rows.push(row('Best local value', best.name,
-        `$${best.cost.toFixed(4)}/1M out (8B model)`,
-        '#/hw/' + best.key));
+      heroCard = {
+        cost: best.cost, name: best.name, key: best.key,
+        bw: Math.round(best.bw), vram: best.vram,
+        cheapestApi,
+      };
     }
   }
 
-  // Cheapest / priciest cloud
-  {
-    let cheapest = null, priciest = null;
-    for (const [, o] of cloud) {
-      const total = o.price_hr * (o.gpu_count || 1);
-      const gpuEntry = gpus.find(([k]) => k === o.gpu);
-      const gpuName = gpuEntry ? gpuEntry[1].name : o.gpu;
-      const entry = { provider: o.provider, gpu: gpuName, price: total };
-      if (!cheapest || total < cheapest.price) cheapest = entry;
-      if (!priciest || total > priciest.price) priciest = entry;
-    }
-    if (cheapest) rows.push(row('Cheapest cloud GPU', cheapest.gpu,
-      `$${cheapest.price.toFixed(2)}/hr on ${cheapest.provider}`, '#/cloud'));
-    if (priciest) rows.push(row('Priciest cloud GPU', priciest.gpu,
-      `$${priciest.price.toFixed(2)}/hr on ${priciest.provider}`, '#/cloud', 'worst'));
-  }
-
-  // ── Fun matchups ──
-
-  // API vs local break-even
+  // RTX 4090 break-even
   {
     const gpu4090 = gpus.find(([k]) => k === 'rtx_4090');
     if (gpu4090) {
@@ -350,160 +373,115 @@ export function render(container) {
         if (cheapestApi && cheapestApi > elecCostPerM) {
           const savings = cheapestApi - elecCostPerM;
           const breakeven = (gpu.street_usd || 1800) / (savings / 1e6);
-          rows.push(row('RTX 4090 break-even', fmtNum(Math.round(breakeven)) + ' tokens',
-            `vs $${cheapestApi.toFixed(2)}/1M cheapest API (8B)`,
-            '#/hw/rtx_4090', 'fun'));
+          extras.push({
+            label: 'RTX 4090 break-even',
+            value: fmtNum(Math.round(breakeven)) + ' tokens',
+            detail: 'vs $' + cheapestApi.toFixed(2) + '/1M cheapest API (8B model)',
+            href: '#/hw/rtx_4090',
+          });
         }
       }
     }
   }
 
-  // Fits on a laptop?
-  {
-    const m4pro = gpus.find(([k]) => k === 'm4_pro_24');
-    if (m4pro) {
-      const [, gpu] = m4pro;
-      let largest = null;
-      for (const m of models) {
-        if (!m.safetensorsParams) continue;
-        const live = m.providers.some(p => p.status === 'live');
-        if (!live) continue;
-        const result = wasm.bestQuant(gpu, m.safetensorsParams, 'mlx');
-        if (result && result[1].fit === 'Full' && result[1].decode_tok_s > 0) {
-          if (!largest || m.safetensorsParams > largest.params) {
-            largest = { model: m.id, params: m.safetensorsParams, tok: result[1].decode_tok_s };
-          }
-        }
-      }
-      if (largest) {
-        rows.push(row('Fits on a laptop?', shortId(largest.model),
-          `${fmtP(largest.params)} at ${Math.round(largest.tok)} tok/s (M4 Pro 24GB)`,
-          '#/model/' + largest.model, 'fun'));
-      }
-    }
+  // ── Render ──
+
+  let html = `<div style="margin-bottom:6px">
+    <span style="font-size:28px;font-weight:800;color:var(--tx)">Fun Stats</span>
+  </div>
+  <div style="color:var(--dm);font-size:14px;margin-bottom:40px">${models.length} models from 19 providers \u00b7 ${gpus.length} GPUs \u00b7 ${cloud.length} cloud offerings</div>`;
+
+  // Pairs (2x2 grid)
+  html += '<div class="st-pairs">';
+  for (const p of pairs) {
+    html += `<div class="st-pair">
+      <div class="st-pair-head" style="background:${p.color}0a">
+        <span class="st-pair-cat">${esc(p.category)}</span>
+        <span class="st-pair-mul" style="background:${p.color}">${esc(p.multiplier)} gap</span>
+      </div>
+      <div class="st-pair-body">
+        <a class="st-pair-side" href="${esc(p.best.href)}" style="text-decoration:none;color:inherit">
+          <div class="st-pair-lbl" style="color:${p.color}">${esc(p.best.label)}</div>
+          <div class="st-pair-val">${esc(p.best.value)}</div>
+          <div class="st-pair-unit">${esc(p.best.unit)}</div>
+          <div class="st-pair-model">${esc(p.best.model)}</div>
+          ${p.best.detail ? `<div class="st-pair-detail">via ${esc(p.best.detail)}</div>` : ''}
+        </a>
+        <div class="st-pair-vs">vs</div>
+        <a class="st-pair-side worst" href="${esc(p.worst.href)}" style="text-decoration:none;color:inherit">
+          <div class="st-pair-lbl" style="color:var(--dm)">${esc(p.worst.label)}</div>
+          <div class="st-pair-val">${esc(p.worst.value)}</div>
+          <div class="st-pair-unit">${esc(p.worst.unit)}</div>
+          <div class="st-pair-model">${esc(p.worst.model)}</div>
+          ${p.worst.detail ? `<div class="st-pair-detail">via ${esc(p.worst.detail)}</div>` : ''}
+        </a>
+      </div>
+    </div>`;
+  }
+  html += '</div>';
+
+  // Records
+  html += '<div class="st-sec-title">Records</div>';
+  html += '<div class="st-grid4">';
+  for (const r of records) {
+    html += `<a class="st-card" href="${esc(r.href)}" style="background:${r.bg}">
+      <div class="st-card-icon">${r.icon}</div>
+      <div class="st-card-label">${esc(r.label)}</div>
+      <div class="st-card-val">${esc(r.value)}</div>
+      <div class="st-card-model">${esc(r.model)}</div>
+    </a>`;
+  }
+  html += '</div>';
+
+  // Hardware
+  html += '<div class="st-sec-title">Hardware</div>';
+  html += '<div class="st-grid3">';
+  for (const h of hwCards) {
+    html += `<a class="st-card" href="${esc(h.href)}" style="background:${h.bg}">
+      <div class="st-card-icon">${h.icon}</div>
+      <div class="st-card-label">${esc(h.label)}</div>
+      <div class="st-card-val">${esc(h.value)}</div>
+      <div class="st-card-model">${esc(h.model)}</div>
+    </a>`;
+  }
+  html += '</div>';
+
+  // Hero card (best local value)
+  if (heroCard) {
+    html += `<a class="st-hero" href="#/hw/${esc(heroCard.key)}">
+      <div class="st-hero-gem">\ud83d\udc8e</div>
+      <div class="st-hero-lbl">Best local value</div>
+      <div class="st-hero-val">$${heroCard.cost.toFixed(4)} <span>/1M output tokens</span></div>
+      <div class="st-hero-desc">${esc(heroCard.name)} running an 8B model. Electricity only.</div>
+      <div class="st-hero-specs">
+        <span>${fmtNum(heroCard.bw)} GB/s bandwidth</span>
+        <span>${heroCard.vram} GB VRAM</span>
+        ${heroCard.cheapestApi ? `<span>vs $${heroCard.cheapestApi.toFixed(2)}/1M cheapest API</span>` : ''}
+      </div>
+    </a>`;
   }
 
-  // ── More fun stats ──
-
-  // Most tasks covered by one model
-  {
-    let best = null;
-    for (const m of models) {
-      const tasks = new Set();
-      for (const p of m.providers) {
-        if (p.status === 'live' && p.task) tasks.add(p.task);
-      }
-      if (tasks.size > 0 && (!best || tasks.size > best.count)) {
-        best = { model: m.id, count: tasks.size, tasks: [...tasks].join(', ') };
-      }
-    }
-    if (best && best.count > 1) {
-      rows.push(row('Most versatile', shortId(best.model),
-        `${best.count} tasks: ${best.tasks}`,
-        '#/model/' + best.model, 'fun'));
-    }
-  }
-
-  // Smallest model with a provider
-  {
-    let smallest = null;
-    for (const m of models) {
-      if (!m.safetensorsParams) continue;
-      const live = m.providers.some(p => p.status === 'live');
-      if (live && (!smallest || m.safetensorsParams < smallest.params)) {
-        smallest = { model: m.id, params: m.safetensorsParams };
-      }
-    }
-    if (smallest) {
-      rows.push(row('Smallest served', shortId(smallest.model),
-        `${fmtP(smallest.params)} parameters`,
-        '#/model/' + smallest.model, 'fun'));
-    }
-  }
-
-  // Most bandwidth (memory GB/s)
-  {
-    let best = null;
-    for (const [key, gpu] of gpus) {
-      if (!best || gpu.mem_bw_gb_s > best.bw) {
-        best = { key, name: gpu.name, bw: gpu.mem_bw_gb_s };
-      }
-    }
-    if (best) {
-      rows.push(row('Most bandwidth', best.name,
-        `${Math.round(best.bw)} GB/s`,
-        '#/hw/' + best.key));
-    }
-  }
-
-  // Best street price per GB VRAM
-  {
-    let best = null;
-    for (const [key, gpu] of gpus) {
-      if (!gpu.street_usd || !gpu.vram_gb) continue;
-      const ratio = gpu.street_usd / gpu.vram_gb;
-      if (!best || ratio < best.ratio) {
-        best = { key, name: gpu.name, ratio, price: gpu.street_usd, vram: gpu.vram_gb };
-      }
-    }
-    if (best) {
-      rows.push(row('Best $/GB VRAM', best.name,
-        `$${Math.round(best.ratio)}/GB ($${best.price} for ${best.vram}GB)`,
-        '#/hw/' + best.key));
-    }
-  }
-
-  // Worst street price per GB VRAM
-  {
-    let worst = null;
-    for (const [key, gpu] of gpus) {
-      if (!gpu.street_usd || !gpu.vram_gb) continue;
-      const ratio = gpu.street_usd / gpu.vram_gb;
-      if (!worst || ratio > worst.ratio) {
-        worst = { key, name: gpu.name, ratio, price: gpu.street_usd, vram: gpu.vram_gb };
-      }
-    }
-    if (worst) {
-      rows.push(row('Worst $/GB VRAM', worst.name,
-        `$${Math.round(worst.ratio)}/GB ($${worst.price} for ${worst.vram}GB)`,
-        '#/hw/' + worst.key, 'worst'));
-    }
-  }
-
-  // Render
-  const vibeStyle = {
-    best:  { bg: 'rgba(16,185,129,.07)', border: '#10b981', icon: '\u2605', color: '#10b981' },
-    worst: { bg: 'rgba(196,144,8,.07)',  border: '#c49008', icon: '\u2193', color: '#c49008' },
-    fun:   { bg: 'rgba(98,70,234,.07)',  border: '#6246ea', icon: '\u2666', color: '#6246ea' },
-  };
-
-  let html = `<div style="margin-bottom:16px">
-    <span style="font-size:16px;font-weight:800">Fun Stats</span>
-  </div>`;
-
-  for (const r of rows) {
-    const v = vibeStyle[r.vibe] || vibeStyle.best;
-    html += `<a href="${esc(r.href)}" style="
-      display:flex;align-items:center;gap:10px;
-      padding:9px 14px;margin-bottom:3px;
-      background:${v.bg};
-      border-left:3px solid ${v.border};
+  // Extras (break-even etc.)
+  for (const e of extras) {
+    html += `<a href="${esc(e.href)}" style="
+      display:flex;align-items:center;gap:12px;
+      padding:12px 16px;margin-top:8px;
+      background:rgba(98,70,234,.06);border-left:3px solid #6246ea;
       border-radius:0 var(--rs) var(--rs) 0;
       text-decoration:none;color:inherit;
-      transition:background .1s;
-    " onmouseenter="this.style.background='${v.bg.replace('.06', '.12')}'" onmouseleave="this.style.background='${v.bg}'">
-      <span style="color:${v.color};font-size:10px;width:12px;text-align:center;flex-shrink:0">${v.icon}</span>
-      <span style="font-size:10px;font-weight:700;color:${v.color};width:130px;white-space:nowrap;flex-shrink:0">${esc(r.label)}</span>
-      <span style="font-size:10px;color:var(--mt);width:220px;white-space:nowrap;flex-shrink:0;overflow:hidden;text-overflow:ellipsis">${esc(r.detail)}</span>
-      <span style="font-size:12px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">${esc(r.winner)}</span>
+    ">
+      <span style="color:#6246ea;font-size:12px">\u2666</span>
+      <span style="font-size:12px;font-weight:700;color:#6246ea">${esc(e.label)}</span>
+      <span style="font-size:13px;font-weight:800;flex:1">${esc(e.value)}</span>
+      <span style="font-size:11px;color:var(--dm)">${esc(e.detail)}</span>
     </a>`;
   }
 
   container.innerHTML = html;
 }
 
-function row(label, winner, detail, href, vibe) {
-  return { label, winner, detail, href, vibe: vibe || 'best' };
+function card(icon, label, value, model, bg, href) {
+  return { icon, label, value, model, bg, href };
 }
 
 function shortId(id) {
