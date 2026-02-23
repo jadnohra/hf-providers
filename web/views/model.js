@@ -4,6 +4,7 @@ import * as api from '../lib/hf-api.js';
 import { parseModel, readiness } from '../lib/parse.js';
 import * as wasm from '../lib/wasm.js';
 import { wireSort } from '../lib/sort.js';
+import { tip, hwTip } from '../lib/tips.js';
 import { state } from '../app.js';
 
 export function render(container, match) {
@@ -30,7 +31,6 @@ export function render(container, match) {
     if (searchMatch) {
       const enriched = parseModel(searchMatch);
       if (enriched && enriched.providers.length) {
-        // Replace providers with enriched versions
         model.providers = enriched.providers;
       }
     }
@@ -88,8 +88,6 @@ function renderModel(container, model) {
 
   container.innerHTML = html;
 
-  // Wire up filter pills
-  wireFilters(container, model);
   // Wire up snippet tabs
   wireSnippets(container);
   // Wire cost toggle
@@ -109,14 +107,6 @@ function renderProviders(model) {
 
   let html = `<div class="sec">
     <div class="sec-head"><span class="sec-q">Where can I run it via API?</span><div class="sec-line"></div></div>
-    <div class="filter-bar" id="filter-bar">
-      <span class="fp on" data-filter="all">All</span>
-      <span class="fp" data-filter="hot">Hot only</span>
-      <span class="fp" data-filter="tools">Tool use</span>
-      <span class="fp" data-filter="json">JSON mode</span>
-      <span class="fp" data-filter="cheapest">Cheapest first</span>
-      <span class="fp" data-filter="fastest">Fastest first</span>
-    </div>
     <table class="mt" id="provider-table">
       <thead><tr><th>Status</th><th>Provider</th><th>$/1M in</th><th>$/1M out</th><th>Throughput</th><th>Tools</th><th>JSON</th></tr></thead>
       <tbody id="provider-tbody">`;
@@ -137,17 +127,14 @@ function renderProviders(model) {
 }
 
 function renderVariants(model) {
-  // Extract variant hints from model name: look for related models in tags
-  // For now, extract base model info from tags
   const id = model.id;
   const parts = id.split('/');
   if (parts.length < 2) return '';
   const org = parts[0];
   const name = parts.slice(1).join('/');
 
-  // Find related model patterns (same org, similar base name)
   const baseName = name.replace(/-Instruct$|-it$|-Chat$/, '');
-  if (baseName === name) return ''; // no variant suffix to strip
+  if (baseName === name) return '';
 
   return `<div class="variants"><span>Related:</span>
     <a class="var-link" href="#/model/${esc(org)}/${esc(baseName)}">${esc(baseName)}</a>
@@ -220,6 +207,7 @@ function renderHardwareCards(model, params) {
 
     const vramLabel = `${gpu.vram_gb}GB`;
     const vendor = gpu.vendor === 'apple' ? 'Apple Silicon' : gpu.vendor === 'nvidia' ? 'Desktop' : gpu.vendor;
+    const tipLines = hwTip(key);
 
     if (bestResult) {
       const [quantLabel, est] = bestResult;
@@ -229,26 +217,26 @@ function renderHardwareCards(model, params) {
       let fitClass, fitText;
       if (decode && decode >= 30) {
         fitClass = 'fit-y';
-        fitText = `comfortable · ${Math.round(decode)} tok/s${rtSuffix}`;
+        fitText = `comfortable \u00b7 ${Math.round(decode)} tok/s${rtSuffix}`;
       } else if (decode) {
         fitClass = 'fit-t';
-        fitText = `tight · ${Math.round(decode)} tok/s${rtSuffix}`;
+        fitText = `tight \u00b7 ${Math.round(decode)} tok/s${rtSuffix}`;
       } else {
         fitClass = 'fit-n';
         fitText = "doesn't fit";
       }
       cards += `<a class="hw-card" href="#/hw/${key}">
-        <div class="hn">${esc(gpu.name)}</div>
-        <div class="ht">${esc(vendor)} · ${vramLabel}</div>
-        <div class="hm">${quantLabel} · ${weightStr}</div>
+        <div class="hn">${tip(esc(gpu.name), tipLines)}</div>
+        <div class="ht">${esc(vendor)} \u00b7 ${vramLabel}</div>
+        <div class="hm">${quantLabel} \u00b7 ${weightStr}</div>
         <div class="hf ${fitClass}">${fitText}</div>
       </a>`;
     } else {
       const weightStr = (params * 0.5 / 1e9).toFixed(0) + ' GB';
       cards += `<a class="hw-card" href="#/hw/${key}">
-        <div class="hn">${esc(gpu.name)}</div>
-        <div class="ht">${esc(vendor)} · ${vramLabel}</div>
-        <div class="hm">Q4 · ${weightStr} needed</div>
+        <div class="hn">${tip(esc(gpu.name), tipLines)}</div>
+        <div class="ht">${esc(vendor)} \u00b7 ${vramLabel}</div>
+        <div class="hm">Q4 \u00b7 ${weightStr} needed</div>
         <div class="hf fit-n">doesn't fit</div>
       </a>`;
     }
@@ -290,7 +278,7 @@ function renderCostComparison(model, params) {
     }
     if (bestDecode > 0) {
       const costPerM = wasm.costPerMillion(offering.price_hr * offering.gpu_count, bestDecode);
-      cloudData.push({ name: `${offering.gpu} · ${offering.provider}`, price: costPerM, tok: bestDecode });
+      cloudData.push({ name: `${offering.gpu} \u00b7 ${offering.provider}`, price: costPerM, tok: bestDecode });
     }
   }
 
@@ -315,7 +303,7 @@ function renderCostComparison(model, params) {
     }
   }
 
-  function buildCol(title, tagCls, tagLabel, entries, mode) {
+  function buildCol(title, tagCls, entries, mode) {
     const sorted = entries.slice().sort((a, b) =>
       mode === 'cheapest' ? (a.price ?? 999) - (b.price ?? 999) : (b.tok ?? 0) - (a.tok ?? 0)
     ).slice(0, 4);
@@ -335,9 +323,9 @@ function renderCostComparison(model, params) {
   }
 
   function renderMode(mode) {
-    return buildCol('API', 'tg-gn', '', apiData, mode) +
-           buildCol('Cloud rental', 'tg-bl', '', cloudData, mode) +
-           buildCol('Buy & run', 'tg-am', '', localData, mode);
+    return buildCol('API', 'tg-gn', apiData, mode) +
+           buildCol('Cloud rental', 'tg-bl', cloudData, mode) +
+           buildCol('Buy & run', 'tg-am', localData, mode);
   }
 
   return `<div class="sec">
@@ -390,54 +378,6 @@ function renderProviderChips(model) {
     <div class="sec-head"><span class="sec-q">What does a provider serve?</span><div class="sec-line"></div><a class="sec-more" href="#/provider/${esc(liveProviders[0].name)}">Browse all</a></div>
     <div class="prov-strip">${chips}</div>
   </div>`;
-}
-
-function wireFilters(container, model) {
-  const bar = container.querySelector('#filter-bar');
-  if (!bar) return;
-  const tbody = container.querySelector('#provider-tbody');
-  if (!tbody) return;
-
-  bar.addEventListener('click', e => {
-    const fp = e.target.closest('.fp');
-    if (!fp) return;
-    const filter = fp.dataset.filter;
-
-    if (filter === 'all') {
-      bar.querySelectorAll('.fp').forEach(p => p.classList.remove('on'));
-      fp.classList.add('on');
-    } else {
-      bar.querySelector('[data-filter="all"]').classList.remove('on');
-      fp.classList.toggle('on');
-      if (!bar.querySelector('.fp.on')) {
-        bar.querySelector('[data-filter="all"]').classList.add('on');
-      }
-    }
-
-    const active = new Set();
-    bar.querySelectorAll('.fp.on').forEach(p => active.add(p.dataset.filter));
-
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-
-    if (active.has('cheapest') || active.has('fastest')) {
-      const sorted = rows.slice().sort((a, b) => {
-        if (active.has('cheapest')) return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
-        return parseFloat(b.dataset.throughput) - parseFloat(a.dataset.throughput);
-      });
-      for (const row of sorted) tbody.appendChild(row);
-      rows.forEach(r => r.style.display = '');
-    } else if (active.has('all')) {
-      rows.forEach(r => r.style.display = '');
-    } else {
-      rows.forEach(r => {
-        let show = true;
-        if (active.has('hot') && r.dataset.readiness !== 'hot') show = false;
-        if (active.has('tools') && r.dataset.tools !== 'true') show = false;
-        if (active.has('json') && r.dataset.json !== 'true') show = false;
-        r.style.display = show ? '' : 'none';
-      });
-    }
-  });
 }
 
 function wireSnippets(container) {

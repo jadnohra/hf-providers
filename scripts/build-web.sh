@@ -8,6 +8,9 @@ echo "==> Converting TOML data to JSON"
 mkdir -p web/data web/pkg
 python3 scripts/toml2json.py
 
+echo "==> Fetching model data from HF API"
+python3 scripts/fetch-models.py
+
 echo "==> Building Wasm with wasm-pack"
 wasm-pack build crates/hf-providers-web \
     --target web \

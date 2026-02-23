@@ -1,10 +1,12 @@
 // Provider detail view: header, comparison chips, unified model table.
-// The model table starts as a single-provider list. Clicking a comparison
-// provider chip transforms it into a side-by-side view.
+// Uses pre-cached state.models when available, falls back to API.
+// Click a comparison chip to compare; click again to unselect.
 
 import * as api from '../lib/hf-api.js';
 import { parseModel, readiness } from '../lib/parse.js';
 import { wireSort } from '../lib/sort.js';
+import { tip, providerTip } from '../lib/tips.js';
+import { state } from '../app.js';
 
 const PROVIDERS = [
   { id: 'cerebras', name: 'Cerebras' }, { id: 'cohere', name: 'Cohere' },
@@ -19,6 +21,18 @@ const PROVIDERS = [
   { id: 'hf-inference', name: 'HF Inference' },
 ];
 
+function modelsForProvider(provId) {
+  if (state.models) {
+    return Promise.resolve(
+      state.models.filter(m =>
+        Array.isArray(m.inferenceProviderMapping) &&
+        m.inferenceProviderMapping.some(ipm => ipm.provider === provId && ipm.status === 'live')
+      )
+    );
+  }
+  return api.modelsByProvider(provId, 50);
+}
+
 export function render(container, match) {
   const providerId = match[1];
   const provInfo = PROVIDERS.find(p => p.id === providerId);
@@ -27,7 +41,7 @@ export function render(container, match) {
   container.innerHTML = `<div class="loading">Loading models for ${esc(displayName)}...</div>`;
   let cancelled = false;
 
-  api.modelsByProvider(providerId, 50).then(results => {
+  modelsForProvider(providerId).then(results => {
     if (cancelled) return;
 
     const models = results.map(parseModel).filter(Boolean);
@@ -65,9 +79,9 @@ export function render(container, match) {
       </div>
     </div>`;
 
-    // Compare chips
+    // Pick provider to compare
     html += `<div class="sec">
-      <div class="sec-head"><span class="sec-q">Compare with</span><div class="sec-line"></div></div>
+      <div class="sec-head"><span class="sec-q">Pick provider to compare</span><div class="sec-line"></div></div>
       <div class="prov-strip" id="compare-chips">`;
 
     for (const p of PROVIDERS) {
@@ -81,15 +95,12 @@ export function render(container, match) {
 
     html += `</div></div>`;
 
-    // Model table container (single table, transforms on compare)
+    // Model table container
     html += `<div class="sec" id="model-table-sec"></div>`;
 
     container.innerHTML = html;
 
-    // Render the default single-provider table
     renderSingleTable(container, displayName, rows);
-
-    // Wire compare chips
     wireCompare(container, providerId, displayName, rows);
   }).catch(err => {
     if (cancelled) return;
@@ -140,7 +151,23 @@ function wireCompare(container, providerId, displayName, rows) {
 
   chips.forEach(chip => {
     chip.addEventListener('click', async () => {
-      chips.forEach(c => { c.style.borderColor = ''; c.style.background = ''; });
+      const wasSelected = chip.classList.contains('selected');
+
+      // Clear all selections
+      chips.forEach(c => {
+        c.style.borderColor = '';
+        c.style.background = '';
+        c.classList.remove('selected');
+      });
+
+      if (wasSelected) {
+        // Unselect: restore single-provider view
+        renderSingleTable(container, displayName, rows);
+        return;
+      }
+
+      // Select this chip
+      chip.classList.add('selected');
       chip.style.borderColor = 'var(--ac)';
       chip.style.background = 'var(--ac-s)';
 
@@ -151,7 +178,7 @@ function wireCompare(container, providerId, displayName, rows) {
       sec.innerHTML = '<div class="loading">Loading comparison...</div>';
 
       try {
-        const otherResults = await api.modelsByProvider(otherId, 50);
+        const otherResults = await modelsForProvider(otherId);
         const otherModels = otherResults.map(parseModel).filter(Boolean);
 
         const bMap = new Map();

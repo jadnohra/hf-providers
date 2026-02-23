@@ -1,7 +1,9 @@
-// Browse all providers: sortable table with static metadata + live model counts.
+// Browse all providers: sortable table with static metadata + model counts.
+// Uses pre-cached state.models when available, falls back to API.
 
 import * as api from '../lib/hf-api.js';
 import { wireSort } from '../lib/sort.js';
+import { state } from '../app.js';
 
 const PROVIDERS = [
   { id: 'cerebras', name: 'Cerebras', focus: 'Fast inference', tasks: 'text' },
@@ -51,15 +53,27 @@ export function render(container) {
 
   wireSort(container.querySelector('#prov-table'));
 
-  // Fetch live model counts in parallel (small requests, limit=1 just to count)
-  for (const p of PROVIDERS) {
-    api.modelsByProvider(p.id, 200).then(results => {
+  if (state.models) {
+    // Compute counts from pre-cached data
+    for (const p of PROVIDERS) {
+      const count = state.models.filter(m =>
+        Array.isArray(m.inferenceProviderMapping) &&
+        m.inferenceProviderMapping.some(ipm => ipm.provider === p.id && ipm.status === 'live')
+      ).length;
       const td = container.querySelector(`.prov-count[data-id="${p.id}"]`);
-      if (td) td.textContent = String(results.length);
-    }).catch(() => {
-      const td = container.querySelector(`.prov-count[data-id="${p.id}"]`);
-      if (td) td.textContent = '';
-    });
+      if (td) td.textContent = String(count);
+    }
+  } else {
+    // Fall back to API calls
+    for (const p of PROVIDERS) {
+      api.modelsByProvider(p.id, 200).then(results => {
+        const td = container.querySelector(`.prov-count[data-id="${p.id}"]`);
+        if (td) td.textContent = String(results.length);
+      }).catch(() => {
+        const td = container.querySelector(`.prov-count[data-id="${p.id}"]`);
+        if (td) td.textContent = '';
+      });
+    }
   }
 }
 

@@ -1,55 +1,64 @@
-// Browse models: paginated trending models grid.
+// Browse models: all models with inference providers, sorted by likes.
+// Uses pre-cached state.models when available, falls back to API.
 
 import * as api from '../lib/hf-api.js';
 import { wireSort } from '../lib/sort.js';
+import { state } from '../app.js';
 
 export function render(container) {
+  if (state.models) {
+    renderTable(container, state.models);
+    return;
+  }
+
   container.innerHTML = '<div class="loading">Loading models...</div>';
   let cancelled = false;
 
   api.trendingModels(50).then(results => {
     if (cancelled) return;
-    const models = results.filter(m => m.id);
-
-    let html = `<div style="margin-bottom:16px">
-      <span style="font-size:16px;font-weight:800">Trending models</span>
-      <span style="font-size:11px;color:var(--dm);margin-left:8px">${models.length} models</span>
-    </div>`;
-
-    html += `<table class="mt" id="models-table">
-      <thead><tr>
-        <th>Model</th><th>Task</th><th>Params</th><th>Likes</th><th>Downloads</th><th>Providers</th>
-      </tr></thead>
-      <tbody>`;
-
-    for (const m of models) {
-      const parts = m.id.split('/');
-      const org = parts.length > 1 ? parts[0] : '';
-      const name = parts.length > 1 ? parts.slice(1).join('/') : m.id;
-      const params = m.safetensors?.total;
-      const provCount = Array.isArray(m.inferenceProviderMapping)
-        ? m.inferenceProviderMapping.filter(p => p.status === 'live').length : 0;
-
-      html += `<tr>
-        <td class="name"><a class="link" href="#/model/${esc(m.id)}">${org ? `<span style="color:var(--mt);font-weight:400">${esc(org)}/</span>` : ''}${esc(name)}</a></td>
-        <td>${esc(m.pipeline_tag || '')}</td>
-        <td>${params ? fmtP(params) : ''}</td>
-        <td>${m.likes ? fmtNum(m.likes) : ''}</td>
-        <td>${m.downloads ? fmtNum(m.downloads) : ''}</td>
-        <td>${provCount || ''}</td>
-      </tr>`;
-    }
-
-    html += '</tbody></table>';
-    container.innerHTML = html;
-
-    wireSort(container.querySelector('#models-table'));
+    renderTable(container, results.filter(m => m.id));
   }).catch(err => {
     if (cancelled) return;
     container.innerHTML = `<div class="loading">Failed: ${esc(err.message)}</div>`;
   });
 
   return () => { cancelled = true; };
+}
+
+function renderTable(container, models) {
+  let html = `<div style="margin-bottom:16px">
+    <span style="font-size:16px;font-weight:800">All models with providers</span>
+    <span style="font-size:11px;color:var(--dm);margin-left:8px">${models.length} models</span>
+  </div>`;
+
+  html += `<table class="mt" id="models-table">
+    <thead><tr>
+      <th>Model</th><th>Task</th><th>Params</th><th>Likes</th><th>Downloads</th><th>Providers</th>
+    </tr></thead>
+    <tbody>`;
+
+  for (const m of models) {
+    const parts = m.id.split('/');
+    const org = parts.length > 1 ? parts[0] : '';
+    const name = parts.length > 1 ? parts.slice(1).join('/') : m.id;
+    const params = m.safetensors?.total;
+    const provCount = Array.isArray(m.inferenceProviderMapping)
+      ? m.inferenceProviderMapping.filter(p => p.status === 'live').length : 0;
+
+    html += `<tr>
+      <td class="name"><a class="link" href="#/model/${esc(m.id)}">${org ? `<span style="color:var(--mt);font-weight:400">${esc(org)}/</span>` : ''}${esc(name)}</a></td>
+      <td>${esc(m.pipeline_tag || '')}</td>
+      <td>${params ? fmtP(params) : ''}</td>
+      <td>${m.likes ? fmtNum(m.likes) : ''}</td>
+      <td>${m.downloads ? fmtNum(m.downloads) : ''}</td>
+      <td>${provCount || ''}</td>
+    </tr>`;
+  }
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
+
+  wireSort(container.querySelector('#models-table'));
 }
 
 function esc(s) {

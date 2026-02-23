@@ -1,10 +1,11 @@
-// Hardware detail view: spec header, model check, HW comparison, reference models,
-// cloud rentals, electricity cost.
+// Hardware detail view: spec header, HW switcher, model check (detailed),
+// HW comparison (with unselect), reference models, cloud rentals, electricity cost.
 
 import * as wasm from '../lib/wasm.js';
 import * as api from '../lib/hf-api.js';
 import { parseModel } from '../lib/parse.js';
 import { wireSort } from '../lib/sort.js';
+import { tip, hwTipFromSpec } from '../lib/tips.js';
 import { state } from '../app.js';
 
 // Cache trending models for the empty-query dropdown
@@ -22,13 +23,20 @@ export function render(container, match) {
 
   // Pre-fetch trending if not cached
   if (!trendingCache) {
-    api.trendingModels(8).then(results => {
-      trendingCache = results.filter(m => m.id && m.safetensors?.total);
-    }).catch(() => {});
+    if (state.models) {
+      trendingCache = state.models.filter(m => m.safetensors?.total).slice(0, 8);
+    } else {
+      api.trendingModels(8).then(results => {
+        trendingCache = results.filter(m => m.id && m.safetensors?.total);
+      }).catch(() => {});
+    }
   }
 
   const [key, gpu] = found;
   let html = '';
+
+  // HW switcher (compact links)
+  html += renderHwSwitcher(key);
 
   // Spec header
   html += renderSpecHeader(key, gpu);
@@ -56,6 +64,26 @@ export function render(container, match) {
   wireModelCheck(container, gpu);
   // Wire HW comparison
   wireHwCompare(container, key, gpu);
+}
+
+// ── HW switcher (compact) ──
+
+function renderHwSwitcher(currentKey) {
+  const popular = ['rtx_4090', 'rtx_5090', 'm4_max_128', 'm4_pro_48', 'm4_pro_24', 'a100_pcie_80_gb', 'h100_sxm5_80_gb'];
+  const gpus = state.hardware || [];
+
+  let links = '';
+  for (const k of popular) {
+    const entry = gpus.find(([gk]) => gk === k);
+    if (!entry) continue;
+    const isCurrent = k === currentKey;
+    if (links) links += '<span style="color:var(--dm);margin:0 4px">\u00b7</span>';
+    const style = isCurrent ? 'font-weight:700;color:var(--fg)' : '';
+    links += `<a href="#/hw/${esc(k)}" style="${style}">${esc(entry[1].name)}</a>`;
+  }
+  links += '<span style="color:var(--dm);margin:0 4px">\u00b7</span><a href="#/hardware">all</a>';
+
+  return `<div style="font-size:11px;margin-bottom:12px">${links}</div>`;
 }
 
 // ── Check a model ──
@@ -128,10 +156,17 @@ function wireModelCheck(container, gpu) {
       if (trendingCache && trendingCache.length) renderSuggestions(trendingCache.slice(0, 6));
       return;
     }
-    try {
-      const results = await api.searchModels(query, 6);
-      renderSuggestions(results.filter(m => m.id));
-    } catch { dd.classList.remove('open'); }
+    // Search locally first, API fallback
+    if (state.models) {
+      const q = query.toLowerCase();
+      const matches = state.models.filter(m => m.id.toLowerCase().includes(q) && m.safetensors?.total).slice(0, 6);
+      renderSuggestions(matches);
+    } else {
+      try {
+        const results = await api.searchModels(query, 6);
+        renderSuggestions(results.filter(m => m.id));
+      } catch { dd.classList.remove('open'); }
+    }
   }
 
   function selectModel(idx) {
@@ -158,49 +193,70 @@ function wireModelCheck(container, gpu) {
     const runtimes = [];
     if (gpu.mlx_decode_eff != null) runtimes.push('mlx');
     runtimes.push('llama.cpp');
-    const multiRuntime = runtimes.length > 1;
 
-    let bestResult = null;
-    let bestRt = '';
+    const QUANTS = ['Q4', 'Q8', 'FP16'];
+    const rows = [];
+
     for (const rt of runtimes) {
-      const r = wasm.bestQuant(gpu, params, rt);
-      if (r && (!bestResult || (r[1].decode_tok_s || 0) > (bestResult[1].decode_tok_s || 0))) {
-        bestResult = r;
-        bestRt = rt;
+      for (const q of QUANTS) {
+        const est = wasm.estimatePerf(gpu, params, q, rt);
+        if (!est) continue;
+        const fits = est.fit === 'Full';
+        rows.push({
+          quant: q,
+          runtime: rt,
+          fits,
+          weight_gb: est.weight_gb,
+          decode: est.decode_tok_s,
+          prefill: est.prefill_tok_s,
+        });
       }
     }
 
     const shortName = model.id.split('/').pop();
+    let html = `<div style="margin-bottom:6px">
+      <a class="link" href="#/model/${esc(model.id)}" style="font-weight:700">${esc(shortName)}</a>
+      <span style="color:var(--dm);margin-left:6px">${fmtP(params)} params</span>
+    </div>`;
 
-    if (bestResult) {
-      const [quantLabel, est] = bestResult;
-      const decode = est.decode_tok_s;
-      const rtSuffix = multiRuntime ? ` (${bestRt})` : '';
+    if (!rows.length) {
+      html += '<div style="color:var(--dm)">No estimates available</div>';
+      result.innerHTML = html;
+      return;
+    }
+
+    const multiRuntime = runtimes.length > 1;
+
+    html += `<table class="mt" style="margin-top:4px">
+      <thead><tr><th>Quant</th><th>Weights</th><th>Fit</th><th>Decode</th><th>Prefill</th>${multiRuntime ? '<th>Runtime</th>' : ''}</tr></thead>
+      <tbody>`;
+
+    for (const r of rows) {
       let fitClass, fitText;
-      if (decode && decode >= 30) {
-        fitClass = 'fit-y';
-        fitText = `comfortable · ${Math.round(decode)} tok/s${rtSuffix}`;
-      } else if (decode) {
-        fitClass = 'fit-t';
-        fitText = `tight · ${Math.round(decode)} tok/s${rtSuffix}`;
-      } else {
+      if (!r.fits) {
         fitClass = 'fit-n';
-        fitText = "doesn't fit";
+        fitText = "won't fit";
+      } else if (r.decode && r.decode >= 30) {
+        fitClass = 'fit-y';
+        fitText = 'comfortable';
+      } else {
+        fitClass = 'fit-t';
+        fitText = 'tight';
       }
 
-      result.innerHTML = `<div class="hw-card" style="flex:none;width:100%">
-        <div class="hn"><a class="link" href="#/model/${esc(model.id)}">${esc(shortName)}</a></div>
-        <div class="ht">${fmtP(params)} params · ${quantLabel} · ${est.weight_gb.toFixed(0)} GB</div>
-        <div class="hf ${fitClass}">${fitText}</div>
-      </div>`;
-    } else {
-      const weightQ4 = (params * 0.5 / 1e9).toFixed(0);
-      result.innerHTML = `<div class="hw-card" style="flex:none;width:100%">
-        <div class="hn"><a class="link" href="#/model/${esc(model.id)}">${esc(shortName)}</a></div>
-        <div class="ht">${fmtP(params)} params · Q4 needs ${weightQ4} GB · ${gpu.vram_gb} GB available</div>
-        <div class="hf fit-n">doesn't fit</div>
-      </div>`;
+      const dimStyle = r.fits ? '' : 'color:var(--dm)';
+      html += `<tr>
+        <td style="${dimStyle}">${r.quant}</td>
+        <td style="${dimStyle}">${r.weight_gb.toFixed(0)} GB</td>
+        <td><span class="${fitClass}">${fitText}</span></td>
+        <td style="${dimStyle}">${r.decode ? Math.round(r.decode) + ' tok/s' : '\u2014'}</td>
+        <td style="${dimStyle}">${r.prefill ? fmtTokS(r.prefill) : '\u2014'}</td>
+        ${multiRuntime ? `<td style="${dimStyle}">${r.runtime}</td>` : ''}
+      </tr>`;
     }
+
+    html += '</tbody></table>';
+    result.innerHTML = html;
   }
 
   input.addEventListener('focus', showOnFocus);
@@ -239,25 +295,22 @@ function wireModelCheck(container, gpu) {
 
 function renderHwCompare(currentKey) {
   const gpus = state.hardware || [];
-  // Pick popular defaults to show as chips
   const popular = ['rtx_4090', 'rtx_5090', 'm4_max_128', 'm4_pro_48', 'm4_pro_24', 'a100_pcie_80_gb', 'h100_sxm5_80_gb', 'rtx_3090', 'rx_7900_xtx'];
 
   let chips = '';
-  // Popular first, then the rest
-  const shown = new Set();
   for (const k of popular) {
     if (k === currentKey) continue;
     const entry = gpus.find(([gk]) => gk === k);
     if (!entry) continue;
-    shown.add(k);
+    const tipLines = hwTipFromSpec(entry[1]);
     chips += `<div class="prov-chip compare-hw-pick" data-key="${esc(k)}" style="cursor:pointer">
-      <div class="pn">${esc(entry[1].name)}</div>
+      <div class="pn">${tip(esc(entry[1].name), tipLines)}</div>
       <div class="pm">${entry[1].vram_gb}GB</div>
     </div>`;
   }
 
   return `<div class="sec">
-    <div class="sec-head"><span class="sec-q">Compare with another GPU</span><div class="sec-line"></div>
+    <div class="sec-head"><span class="sec-q">Compare with another HW</span><div class="sec-line"></div>
       <a class="sec-more" href="#/hardware">Browse all</a></div>
     <div class="prov-strip" id="hw-compare-chips">${chips}</div>
     <div id="hw-compare-result" style="margin-top:12px"></div>
@@ -271,7 +324,23 @@ function wireHwCompare(container, currentKey, currentGpu) {
 
   chips.forEach(chip => {
     chip.addEventListener('click', () => {
-      chips.forEach(c => { c.style.borderColor = ''; c.style.background = ''; });
+      const wasSelected = chip.classList.contains('selected');
+
+      // Clear all selections
+      chips.forEach(c => {
+        c.style.borderColor = '';
+        c.style.background = '';
+        c.classList.remove('selected');
+      });
+
+      if (wasSelected) {
+        // Unselect: clear comparison
+        result.innerHTML = '';
+        return;
+      }
+
+      // Select this chip
+      chip.classList.add('selected');
       chip.style.borderColor = 'var(--ac)';
       chip.style.background = 'var(--ac-s)';
 
@@ -284,16 +353,14 @@ function wireHwCompare(container, currentKey, currentGpu) {
       const reportA = wasm.machineReport(currentGpu) || [];
       const reportB = wasm.machineReport(otherGpu) || [];
 
-      // Build lookup by model id
       const mapA = new Map();
       for (const m of reportA) mapA.set(m.id, m);
       const mapB = new Map();
       for (const m of reportB) mapB.set(m.id, m);
 
-      // All model ids (reference models are the same for both, but be safe)
       const allIds = new Set([...mapA.keys(), ...mapB.keys()]);
 
-      function bestForModel(m, gpu) {
+      function bestForModel(m) {
         if (!m) return null;
         const fitting = m.results.filter(r => r.fits);
         if (!fitting.length) return null;
@@ -317,12 +384,11 @@ function wireHwCompare(container, currentKey, currentGpu) {
         const mA = mapA.get(id);
         const mB = mapB.get(id);
         const ref = mA || mB;
-        const bestA = bestForModel(mA, currentGpu);
-        const bestB = bestForModel(mB, otherGpu);
+        const bestA = bestForModel(mA);
+        const bestB = bestForModel(mB);
 
         const decA = bestA?.decode;
         const decB = bestB?.decode;
-        // Highlight better decode
         const decACls = (decA && decB && decA >= decB) ? 'cc-best' : '';
         const decBCls = (decA && decB && decB >= decA) ? 'cc-best' : '';
 
@@ -345,8 +411,8 @@ function wireHwCompare(container, currentKey, currentGpu) {
 
       // Spec comparison summary
       html += `<div style="margin-top:8px;display:flex;gap:16px;font-size:10px;color:var(--dm)">
-        <span>${esc(currentGpu.name)}: ${currentGpu.vram_gb}GB · ${Math.round(currentGpu.mem_bw_gb_s)} GB/s · ${currentGpu.tdp_w}W${currentGpu.street_usd ? ' · $' + currentGpu.street_usd.toLocaleString() : ''}</span>
-        <span>${esc(otherGpu.name)}: ${otherGpu.vram_gb}GB · ${Math.round(otherGpu.mem_bw_gb_s)} GB/s · ${otherGpu.tdp_w}W${otherGpu.street_usd ? ' · $' + otherGpu.street_usd.toLocaleString() : ''}</span>
+        <span>${esc(currentGpu.name)}: ${currentGpu.vram_gb}GB \u00b7 ${Math.round(currentGpu.mem_bw_gb_s)} GB/s \u00b7 ${currentGpu.tdp_w}W${currentGpu.street_usd ? ' \u00b7 $' + currentGpu.street_usd.toLocaleString() : ''}</span>
+        <span>${esc(otherGpu.name)}: ${otherGpu.vram_gb}GB \u00b7 ${Math.round(otherGpu.mem_bw_gb_s)} GB/s \u00b7 ${otherGpu.tdp_w}W${otherGpu.street_usd ? ' \u00b7 $' + otherGpu.street_usd.toLocaleString() : ''}</span>
       </div>`;
 
       result.innerHTML = html;
@@ -418,7 +484,7 @@ function renderModelTable(gpu) {
       <tbody>`;
 
   if (comfortable.length) {
-    html += `<tr class="group-row"><td colspan="6"><span class="fit-y">comfortable</span> — fits in VRAM, 30+ tok/s</td></tr>`;
+    html += `<tr class="group-row"><td colspan="6"><span class="fit-y">comfortable</span> \u2014 fits in VRAM, 30+ tok/s</td></tr>`;
     for (const m of comfortable) {
       const rt = multiRuntime ? ` (${m.best.runtime})` : '';
       html += `<tr>
@@ -433,7 +499,7 @@ function renderModelTable(gpu) {
   }
 
   if (tight.length) {
-    html += `<tr class="group-row"><td colspan="6"><span class="fit-t">tight</span> — fits but &lt;30 tok/s</td></tr>`;
+    html += `<tr class="group-row"><td colspan="6"><span class="fit-t">tight</span> \u2014 fits but &lt;30 tok/s</td></tr>`;
     for (const m of tight) {
       const rt = multiRuntime ? ` (${m.best.runtime})` : '';
       html += `<tr>
@@ -448,7 +514,7 @@ function renderModelTable(gpu) {
   }
 
   if (wontRun.length) {
-    html += `<tr class="group-row"><td colspan="6"><span class="fit-n">won't run</span> — doesn't fit even at Q4</td></tr>`;
+    html += `<tr class="group-row"><td colspan="6"><span class="fit-n">won't run</span> \u2014 doesn't fit even at Q4</td></tr>`;
     for (const m of wontRun) {
       const w = (m.params * 0.5 / 1e9).toFixed(0);
       html += `<tr>

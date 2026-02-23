@@ -14,6 +14,7 @@ import { render as renderBrowseProviders } from './views/browse-providers.js';
 export const state = {
   hardware: null,
   cloud: null,
+  models: null,
 };
 
 async function boot() {
@@ -30,10 +31,18 @@ async function boot() {
     state.hardware = await hwResp.json();
     state.cloud = await clResp.json();
 
+    // Models cache is optional (needs fetch-models.py to be run)
+    try {
+      const mdResp = await fetch('data/models.json');
+      if (mdResp.ok) state.models = await mdResp.json();
+    } catch {}
+
     // Update hero subtitle with actual counts
+    const modelCount = state.models ? state.models.length : '';
     const sub = document.getElementById('hero-sub');
     if (sub) {
-      sub.textContent = `19 providers · ${state.hardware.length} hardware configs · ${state.cloud.length} cloud offerings — compared in one place`;
+      sub.textContent = `19 providers · ${state.hardware.length} hardware configs · ${state.cloud.length} cloud offerings`
+        + (modelCount ? ` · ${modelCount} models` : '') + ' — compared in one place';
     }
   } catch (err) {
     content.innerHTML = `<div class="loading">Failed to load: ${err.message}</div>`;

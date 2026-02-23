@@ -1,4 +1,4 @@
-// Search dropdown with debounced HF API + local hardware/provider filtering.
+// Search dropdown with local search (pre-cached) + API fallback.
 // Supports both the hero search (landing page) and the top-bar search (detail pages).
 
 import * as api from './hf-api.js';
@@ -21,17 +21,18 @@ const PROVIDERS = [
 let trendingCache = null;
 
 export function init() {
-  // Pre-fetch trending for the dropdown
-  api.trendingModels(5).then(results => {
-    trendingCache = results.filter(m => m.id);
-  }).catch(() => {});
+  // Use pre-cached models for trending if available
+  if (state.models && state.models.length) {
+    trendingCache = state.models.slice(0, 5);
+  } else {
+    api.trendingModels(5).then(results => {
+      trendingCache = results.filter(m => m.id);
+    }).catch(() => {});
+  }
 
-  // Wire hero search
   wireSearch('search-input', 'search-dd');
-  // Wire top-bar search
   wireSearch('top-search-input', 'top-search-dd');
 
-  // Close all dropdowns on outside click
   document.addEventListener('click', e => {
     if (!e.target.closest('.search-wrap')) {
       document.querySelectorAll('.dd').forEach(dd => dd.classList.remove('open'));
@@ -50,7 +51,7 @@ function wireSearch(inputId, ddId) {
 
   input.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(() => render(input.value), 200);
+    timer = setTimeout(() => render(input.value), 150);
   });
 
   input.addEventListener('focus', () => render(input.value));
@@ -137,12 +138,20 @@ function wireSearch(inputId, ddId) {
     const hwMatches = matchHardware(query);
     const provMatches = matchProviders(query);
 
+    // Search models: local first, API fallback
     let modelMatches = [];
     if (query.length >= 2) {
-      try {
-        const results = await api.searchModels(query, 5);
-        modelMatches = results.filter(m => m.id);
-      } catch { /* ignore */ }
+      if (state.models) {
+        const q = query.toLowerCase();
+        modelMatches = state.models.filter(m =>
+          m.id.toLowerCase().includes(q)
+        ).slice(0, 5);
+      } else {
+        try {
+          const results = await api.searchModels(query, 5);
+          modelMatches = results.filter(m => m.id);
+        } catch { /* ignore */ }
+      }
     }
 
     if (modelMatches.length) {
