@@ -2,6 +2,8 @@
 
 **Many inference providers serve Hugging Face models. Which one should you use?**
 
+**Try it in the browser: [vram.run](https://vram.run)**
+
 `hf-providers` answers five questions:
 
 1. **Where can I run this model?** — every provider that serves it, with live status, pricing, and throughput
