@@ -6,10 +6,13 @@ import { render as renderModel } from './model.js';
 import { state } from '../app.js';
 
 export function render(container) {
-  // Use cached top model that has params (so hardware cards + cost comparison render)
+  const DEFAULT_MODEL = 'meta-llama/Llama-3.1-8B-Instruct';
+
+  // Use default model if available in cache, otherwise first cached model with params
   if (state.models && state.models.length) {
-    const withParams = state.models.find(m => m.safetensors?.total);
-    const modelId = (withParams || state.models[0]).id;
+    const defaultMatch = state.models.find(m => m.id === DEFAULT_MODEL);
+    const modelId = defaultMatch ? DEFAULT_MODEL
+      : (state.models.find(m => m.safetensors?.total) || state.models[0]).id;
     return renderModel(container, [null, modelId]);
   }
 

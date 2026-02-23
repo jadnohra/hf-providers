@@ -1,8 +1,13 @@
-# hf-providers
+<p align="center">
+  <img src="assets/logo.svg" width="280" alt="vram.run">
+</p>
 
-**Many inference providers serve Hugging Face models. Which one should you use?**
+<p align="center">
+  <b>Many inference providers serve Hugging Face models. Which one should you use?</b><br>
+  <a href="https://vram.run"><b>Try it in the browser</b></a> &nbsp;|&nbsp; <code>brew install jadnohra/tap/hf-providers</code>
+</p>
 
-**Try it in the browser: [vram.run](https://vram.run)**
+---
 
 `hf-providers` answers five questions:
 
@@ -152,6 +157,8 @@ Data comes live from the Hugging Face Inference API. Currently tracked:
 Cerebras, Cohere, fal, Featherless, Fireworks, Groq, Hyperbolic, Nebius, Novita, Nscale, OVHcloud, Public AI, Replicate, SambaNova, Scaleway, Together AI, WaveSpeed, Z.ai, HF Inference
 
 ## Web UI
+
+<p align="center"><img src="assets/screenshot-web.png" width="70%"></p>
 
 [vram.run](https://vram.run) runs the same estimation engine as the CLI, compiled to a 125KB WebAssembly module via `wasm-bindgen`. Model data (828 models from 19 providers) is pre-cached at build time, so pages render instantly with no API calls for listings. Only individual model detail pages fetch live data for fresh provider enrichment.
 

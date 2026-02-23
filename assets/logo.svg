@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="52" viewBox="0 0 280 52">
+  <!-- Row 0 -->
+  <rect x="0" y="0" width="10.75" height="10.75" rx="3" fill="#10b981"/>
+  <rect x="13.75" y="0" width="10.75" height="10.75" rx="3" fill="#e0e0e0"/>
+  <rect x="27.5" y="0" width="10.75" height="10.75" rx="3" fill="#e0e0e0"/>
+  <rect x="41.25" y="0" width="10.75" height="10.75" rx="3" fill="#10b981"/>
+  <!-- Row 1 -->
+  <rect x="0" y="13.75" width="10.75" height="10.75" rx="3" fill="#10b981"/>
+  <rect x="13.75" y="13.75" width="10.75" height="10.75" rx="3" fill="#e0e0e0"/>
+  <rect x="27.5" y="13.75" width="10.75" height="10.75" rx="3" fill="#e0e0e0"/>
+  <rect x="41.25" y="13.75" width="10.75" height="10.75" rx="3" fill="#10b981"/>
+  <!-- Row 2 -->
+  <rect x="0" y="27.5" width="10.75" height="10.75" rx="3" fill="#e0e0e0"/>
+  <rect x="13.75" y="27.5" width="10.75" height="10.75" rx="3" fill="#10b981"/>
+  <rect x="27.5" y="27.5" width="10.75" height="10.75" rx="3" fill="#10b981"/>
+  <rect x="41.25" y="27.5" width="10.75" height="10.75" rx="3" fill="#e0e0e0"/>
+  <!-- Row 3 -->
+  <rect x="0" y="41.25" width="10.75" height="10.75" rx="3" fill="#e0e0e0"/>
+  <rect x="13.75" y="41.25" width="10.75" height="10.75" rx="3" fill="#10b981"/>
+  <rect x="27.5" y="41.25" width="10.75" height="10.75" rx="3" fill="#e0e0e0"/>
+  <rect x="41.25" y="41.25" width="10.75" height="10.75" rx="3" fill="#e0e0e0"/>
+  <!-- Text -->
+  <text x="68" y="38" font-family="'SF Mono','Fira Code','Cascadia Code','JetBrains Mono',monospace" font-size="40" font-weight="700" letter-spacing="-1">
+    <tspan fill="#1a1a1a">vram</tspan><tspan fill="#10b981">.run</tspan>
+  </text>
+</svg>
