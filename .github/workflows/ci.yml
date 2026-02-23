@@ -19,11 +19,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+          targets: wasm32-unknown-unknown
 
       - uses: Swatinem/rust-cache@v2
 
       - name: cargo check
         run: cargo check --workspace
+
+      - name: cargo check wasm
+        run: cargo check -p hf-providers-web --target wasm32-unknown-unknown
 
       - name: clippy (deny warnings)
         run: cargo clippy --workspace -- -D warnings

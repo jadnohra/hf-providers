@@ -1,7 +1,9 @@
+use serde::Serialize;
+
 use crate::hardware::{GpuSpec, Runtime};
 
 /// Quantization level for weight storage.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub enum Quant {
     Q4,
     Q8,
@@ -27,7 +29,7 @@ impl Quant {
 }
 
 /// Whether the model fits in GPU VRAM.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Fit {
     /// Fits entirely in VRAM.
     Full,
@@ -36,7 +38,7 @@ pub enum Fit {
 }
 
 /// Performance estimate for a model on a specific GPU at a given quantization.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Estimate {
     pub gpu_key: String,
     pub gpu_name: String,

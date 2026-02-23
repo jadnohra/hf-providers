@@ -1,4 +1,6 @@
+#[cfg(feature = "network")]
 pub mod api;
+#[cfg(feature = "network")]
 pub mod cache;
 pub mod cloud;
 pub mod error;
@@ -9,6 +11,7 @@ pub mod pricing;
 pub mod provider;
 pub mod reference;
 pub mod snippet;
+#[cfg(feature = "network")]
 pub mod sync;
 
 pub use error::HfpError;

@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
+#[cfg(feature = "network")]
 use crate::model::Model;
+#[cfg(feature = "network")]
 use crate::provider::ProviderInfo;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -22,9 +24,9 @@ impl FromStr for Lang {
     }
 }
 
-pub fn generate(model: &Model, provider: &ProviderInfo, lang: Lang) -> String {
-    let model_id = &model.id;
-    let prov = &provider.name;
+/// Generate a snippet from just model_id and provider name strings.
+pub fn generate_simple(model_id: &str, provider_name: &str, lang: Lang) -> String {
+    let prov = provider_name;
 
     match lang {
         Lang::Python => format!(
@@ -57,4 +59,9 @@ const result = await client.chatCompletion({{
 console.log(result.choices[0].message.content);"#
         ),
     }
+}
+
+#[cfg(feature = "network")]
+pub fn generate(model: &Model, provider: &ProviderInfo, lang: Lang) -> String {
+    generate_simple(&model.id, &provider.name, lang)
 }

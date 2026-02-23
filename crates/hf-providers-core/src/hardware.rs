@@ -1,15 +1,16 @@
 use std::collections::BTreeMap;
 use std::fmt;
-use std::path::Path;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::error::{HfpError, Result};
 
 /// Inference runtime.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Runtime {
+    #[serde(rename = "llama.cpp")]
     LlamaCpp,
+    #[serde(rename = "mlx")]
     Mlx,
 }
 
@@ -23,7 +24,7 @@ impl fmt::Display for Runtime {
 }
 
 /// GPU specification from hardware.toml.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GpuSpec {
     pub name: String,
     pub vendor: String,
@@ -72,7 +73,8 @@ struct HardwareFile {
 }
 
 /// Load GPU specs from a hardware.toml file.
-pub fn load_hardware(path: &Path) -> Result<Vec<(String, GpuSpec)>> {
+#[cfg(feature = "network")]
+pub fn load_hardware(path: &std::path::Path) -> Result<Vec<(String, GpuSpec)>> {
     let content = std::fs::read_to_string(path).map_err(|e| HfpError::Io(e.to_string()))?;
     parse_hardware(&content)
 }
@@ -92,6 +94,7 @@ pub fn load_bundled_hardware() -> Result<Vec<(String, GpuSpec)>> {
 }
 
 /// Load hardware data: cached file if available, otherwise bundled.
+#[cfg(feature = "network")]
 pub fn load_hardware_cached() -> Result<Vec<(String, GpuSpec)>> {
     if let Some(path) = crate::cache::cache_path("hardware.toml") {
         if let Ok(content) = std::fs::read_to_string(&path) {

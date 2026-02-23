@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hf-providers</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="top">
+  <a class="logo" href="#/">hf-providers</a>
+  <div class="top-search search-wrap" id="top-search" style="display:none;flex:1;max-width:360px;margin:0 16px">
+    <input class="search" id="top-search-input" placeholder="Search..." autocomplete="off" style="padding:6px 12px;font-size:12px">
+    <div class="dd" id="top-search-dd"></div>
+  </div>
+  <div class="top-r">
+    <a href="#/models">All Models</a>
+    <a href="#/hardware">All HW</a>
+    <a href="#/providers">All Providers</a>
+    <a href="https://github.com/jadnohra/hf-providers">GitHub</a>
+  </div>
+</div>
+
+<div class="hero">
+  <h1>Where should you run your model?</h1>
+  <p id="hero-sub">19 providers · 220+ hardware configs · 30+ cloud offerings — compared in one place</p>
+  <div class="search-wrap">
+    <input class="search" id="search-input" placeholder="Search a model, hardware, or provider..." autocomplete="off">
+    <div class="dd" id="search-dd"></div>
+  </div>
+  <div class="browse-links">
+    <a href="#/models">All models</a>
+    <a href="#/hardware">All hardware</a>
+    <a href="#/providers">All providers</a>
+  </div>
+</div>
+
+<div class="content" id="content"></div>
+
+<div class="foot">
+  <a href="https://github.com/jadnohra/hf-providers">GitHub</a>
+  <a href="https://github.com/jadnohra/hf-providers#install">Install CLI</a>
+  <span>· MIT</span>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

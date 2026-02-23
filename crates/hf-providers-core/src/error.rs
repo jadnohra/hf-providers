@@ -1,5 +1,6 @@
 #[derive(Debug, thiserror::Error)]
 pub enum HfpError {
+    #[cfg(feature = "network")]
     #[error("HTTP request failed: {0}")]
     Http(#[from] reqwest::Error),
 

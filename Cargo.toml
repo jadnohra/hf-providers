@@ -3,6 +3,11 @@ resolver = "2"
 members = [
     "crates/hf-providers-core",
     "crates/hf-providers-cli",
+    "crates/hf-providers-web",
+]
+default-members = [
+    "crates/hf-providers-core",
+    "crates/hf-providers-cli",
 ]
 
 [workspace.package]

@@ -5,13 +5,17 @@ edition.workspace = true
 license.workspace = true
 description.workspace = true
 
+[features]
+default = ["network"]
+network = ["reqwest", "tokio", "dirs", "urlencoding"]
+
 [dependencies]
-reqwest.workspace = true
-tokio.workspace = true
+reqwest = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
-urlencoding = "2"
-dirs = "5"
+dirs = { version = "5", optional = true }
+urlencoding = { version = "2", optional = true }
 toml = { workspace = true }

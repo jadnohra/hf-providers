@@ -1,12 +1,11 @@
 use std::collections::BTreeMap;
-use std::path::Path;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::error::{HfpError, Result};
 
 /// A cloud GPU rental offering from cloud.toml.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct CloudOffering {
     pub name: String,
     pub provider: String,
@@ -29,7 +28,8 @@ struct CloudFile {
 }
 
 /// Load cloud offerings from a cloud.toml file.
-pub fn load_cloud(path: &Path) -> Result<Vec<(String, CloudOffering)>> {
+#[cfg(feature = "network")]
+pub fn load_cloud(path: &std::path::Path) -> Result<Vec<(String, CloudOffering)>> {
     let content = std::fs::read_to_string(path).map_err(|e| HfpError::Io(e.to_string()))?;
     parse_cloud(&content)
 }
@@ -48,6 +48,7 @@ pub fn load_bundled_cloud() -> Result<Vec<(String, CloudOffering)>> {
 }
 
 /// Load cloud data: cached file if available, otherwise bundled.
+#[cfg(feature = "network")]
 pub fn load_cloud_cached() -> Result<Vec<(String, CloudOffering)>> {
     if let Some(path) = crate::cache::cache_path("cloud.toml") {
         if let Ok(content) = std::fs::read_to_string(&path) {
