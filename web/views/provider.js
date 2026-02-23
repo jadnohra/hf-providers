@@ -174,7 +174,7 @@ function renderSingleTable(container, displayName, rows) {
     const shortName = model.id.split('/').pop();
     html += `<tr>
       <td><span class="dt ${dotClass}"></span><span class="sl ${slClass}">${r}</span></td>
-      <td class="name"><a class="link" href="#/model/${esc(model.id)}">${esc(shortName)}</a></td>
+      <td class="name"><a class="link" href="#/model/${esc(model.id)}" data-tip="${esc(model.id + (model.safetensorsParams ? ' \u00b7 ' + fmtP(model.safetensorsParams) : ''))}">${esc(shortName)}</a></td>
       <td>${esc(prov.task || model.pipelineTag || '')}</td>
       <td>${prov.inputPrice != null ? '$' + prov.inputPrice.toFixed(2) : ''}</td>
       <td>${prov.outputPrice != null ? '$' + prov.outputPrice.toFixed(2) : ''}</td>
@@ -254,6 +254,7 @@ function wireCompare(container, providerId, displayName, rows) {
             <th>Model</th>
             <th colspan="2" style="text-align:center;border-left:2px solid var(--bd)">${esc(displayName)}</th>
             <th colspan="2" style="text-align:center;border-left:2px solid var(--bd)">${esc(otherName)}</th>
+            <th rowspan="2" style="border-left:2px solid var(--bd);text-align:center">vs</th>
           </tr>
           <tr>
             <th></th>
@@ -263,15 +264,15 @@ function wireCompare(container, providerId, displayName, rows) {
           <tbody>`;
 
         if (both.length) {
-          html += `<tr class="group-row"><td colspan="5">Both providers \u00b7 ${both.length} model${both.length !== 1 ? 's' : ''}</td></tr>`;
+          html += `<tr class="group-row"><td colspan="6">Both providers \u00b7 ${both.length} model${both.length !== 1 ? 's' : ''}</td></tr>`;
           for (const { model, a, b } of both) html += compareRow(model, a, b);
         }
         if (onlyA.length) {
-          html += `<tr class="group-row"><td colspan="5">Only on ${esc(displayName)} \u00b7 ${onlyA.length}</td></tr>`;
+          html += `<tr class="group-row"><td colspan="6">Only on ${esc(displayName)} \u00b7 ${onlyA.length}</td></tr>`;
           for (const { model, a } of onlyA) html += compareRow(model, a, null);
         }
         if (onlyB.length) {
-          html += `<tr class="group-row"><td colspan="5">Only on ${esc(otherName)} \u00b7 ${onlyB.length}</td></tr>`;
+          html += `<tr class="group-row"><td colspan="6">Only on ${esc(otherName)} \u00b7 ${onlyB.length}</td></tr>`;
           for (const { model, b } of onlyB) html += compareRow(model, null, b);
         }
 
@@ -302,16 +303,43 @@ function compareRow(model, a, b) {
   const aStyle = a ? '' : 'color:var(--dm)';
   const bStyle = b ? '' : 'color:var(--dm)';
 
+  let ratio = '';
+  if (aTok != null && bTok != null && aTok > 0 && bTok > 0) {
+    const r = aTok / bTok;
+    const color = r >= 1.05 ? 'var(--gn)' : r <= 0.95 ? 'var(--rd)' : 'var(--dm)';
+    const label = r >= 0.95 && r <= 1.05 ? '~1x' : r.toFixed(1) + 'x';
+    ratio = `<span style="color:${color};font-weight:600">${label}</span>`;
+  } else if (aPrice != null && bPrice != null && aPrice > 0 && bPrice > 0) {
+    const r = bPrice / aPrice;
+    const color = r >= 1.05 ? 'var(--gn)' : r <= 0.95 ? 'var(--rd)' : 'var(--dm)';
+    const label = r >= 0.95 && r <= 1.05 ? '~1x' : r.toFixed(1) + 'x$';
+    ratio = `<span style="color:${color};font-weight:600">${label}</span>`;
+  } else if (a && !b) {
+    ratio = `<span style="color:var(--dm)">only</span>`;
+  } else if (!a && b) {
+    ratio = `<span style="color:var(--dm)">\u2014</span>`;
+  }
+
   return `<tr>
-    <td class="name"><a class="link" href="#/model/${esc(model.id)}">${esc(shortName)}</a></td>
+    <td class="name"><a class="link" href="#/model/${esc(model.id)}" data-tip="${esc(model.id + (model.safetensorsParams ? ' \u00b7 ' + fmtP(model.safetensorsParams) : ''))}">${esc(shortName)}</a></td>
     <td class="${aPriceCls}" style="border-left:2px solid var(--bd);${aStyle}">${aPrice != null ? '$' + aPrice.toFixed(2) : (a ? '' : '\u2014')}</td>
     <td class="${aTokCls}" style="${aStyle}">${aTok != null ? Math.round(aTok) : (a ? '' : '\u2014')}</td>
     <td class="${bPriceCls}" style="border-left:2px solid var(--bd);${bStyle}">${bPrice != null ? '$' + bPrice.toFixed(2) : (b ? '' : '\u2014')}</td>
     <td class="${bTokCls}" style="${bStyle}">${bTok != null ? Math.round(bTok) : (b ? '' : '\u2014')}</td>
+    <td style="border-left:2px solid var(--bd);text-align:center;font-size:10px">${ratio}</td>
   </tr>`;
 }
 
 function esc(s) {
   if (!s) return '';
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmtP(n) {
+  if (n >= 1e9) {
+    const b = n / 1e9;
+    return b >= 100 ? `${b.toFixed(0)}B` : `${b.toFixed(1)}B`;
+  }
+  if (n >= 1e6) return `${(n / 1e6).toFixed(0)}M`;
+  return `${(n / 1e3).toFixed(0)}K`;
 }

@@ -376,127 +376,79 @@ function wireModelCheck(container, gpu) {
 // ── HW comparison (search + chips + unselect) ──
 
 function renderHwCompare(currentKey) {
-  const gpus = state.hardware || [];
-  const popular = ['rtx_4090', 'rtx_5090', 'm4_max_128', 'm4_pro_48', 'm4_pro_24', 'a100_pcie_80_gb', 'h100_sxm5_80_gb', 'rtx_3090', 'rx_7900_xtx'];
-
-  let chips = '';
-  for (const k of popular) {
-    if (k === currentKey) continue;
-    const entry = gpus.find(([gk]) => gk === k);
-    if (!entry) continue;
-    const tipLines = hwTipFromSpec(entry[1]);
-    chips += `<div class="prov-chip compare-hw-pick" data-key="${esc(k)}" style="cursor:pointer">
-      <div class="pn">${tip(esc(entry[1].name), tipLines)}</div>
-      <div class="pm">${entry[1].vram_gb}GB</div>
-    </div>`;
-  }
-
   return `<div class="sec">
     <div class="sec-head"><span class="sec-q">Compare with another HW</span><div class="sec-line"></div>
       <a class="sec-more" href="#/hardware">Browse all</a></div>
-    <div style="position:relative;margin-bottom:8px">
+    <div class="search-wrap" style="max-width:none;margin:0 0 8px">
       <input class="search" id="hw-compare-search" placeholder="Search hardware to compare..." autocomplete="off" style="padding:6px 12px;font-size:11px">
       <div class="dd" id="hw-compare-search-dd" style="max-height:280px;overflow-y:auto"></div>
     </div>
-    <div class="prov-strip" id="hw-compare-chips">${chips}</div>
     <div id="hw-compare-result" style="margin-top:12px"></div>
   </div>`;
 }
 
 function wireHwCompare(container, currentKey, currentGpu) {
-  const chips = container.querySelectorAll('.compare-hw-pick');
   const result = container.querySelector('#hw-compare-result');
   const searchInput = container.querySelector('#hw-compare-search');
   const searchDd = container.querySelector('#hw-compare-search-dd');
   const gpus = state.hardware || [];
+  const popular = ['rtx_4090', 'rtx_5090', 'm4_max_128', 'm4_pro_48', 'm4_pro_24', 'a100_pcie_80_gb', 'h100_sxm5_80_gb', 'rtx_3090', 'rx_7900_xtx'];
 
   function doCompare(otherKey) {
     const otherEntry = gpus.find(([k]) => k === otherKey);
     if (!otherEntry) return;
-    const [, otherGpu] = otherEntry;
+    renderComparison(result, container, currentGpu, otherEntry[1]);
+  }
 
-    // Highlight the matching chip if it exists
-    chips.forEach(c => {
-      c.style.borderColor = '';
-      c.style.background = '';
-      c.classList.remove('selected');
-    });
-    const matchingChip = container.querySelector(`.compare-hw-pick[data-key="${otherKey}"]`);
-    if (matchingChip) {
-      matchingChip.classList.add('selected');
-      matchingChip.style.borderColor = 'var(--ac)';
-      matchingChip.style.background = 'var(--ac-s)';
+  function showDropdown(query) {
+    const q = query.toLowerCase().replace(/[-_ ]/g, '');
+    let matches;
+    if (!q) {
+      matches = popular.map(k => gpus.find(([gk]) => gk === k)).filter(Boolean)
+        .filter(([k]) => k !== currentKey);
+    } else {
+      matches = gpus.filter(([key, gpu]) => {
+        if (key === currentKey) return false;
+        const k = key.replace(/_/g, '');
+        const n = gpu.name.toLowerCase().replace(/[-_ ]/g, '');
+        return k.includes(q) || n.includes(q);
+      }).slice(0, 10);
     }
 
-    renderComparison(result, container, currentGpu, otherGpu);
+    if (!matches.length) { searchDd.classList.remove('open'); return; }
+
+    let html = '';
+    for (const [key, gpu] of matches) {
+      html += `<div class="dd-item" data-key="${esc(key)}" style="cursor:pointer" data-tip="${esc(gpu.vram_gb + ' GB VRAM \u00b7 ' + Math.round(gpu.mem_bw_gb_s) + ' GB/s \u00b7 ' + gpu.fp16_tflops.toFixed(1) + ' TFLOPS' + (gpu.street_usd ? ' \u00b7 ~$' + gpu.street_usd.toLocaleString() : ''))}">
+        <div class="dd-name">${esc(gpu.name)}</div>
+        <div class="dd-hint">${gpu.vram_gb}GB \u00b7 ${esc(gpu.vendor)}</div>
+      </div>`;
+    }
+    searchDd.innerHTML = html;
+    searchDd.classList.add('open');
+
+    searchDd.querySelectorAll('.dd-item').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        searchDd.querySelectorAll('.dd-item').forEach(x => x.classList.remove('hl'));
+        el.classList.add('hl');
+      });
+      el.addEventListener('click', () => {
+        searchDd.classList.remove('open');
+        searchInput.value = '';
+        doCompare(el.dataset.key);
+      });
+    });
   }
 
-  function clearCompare() {
-    chips.forEach(c => {
-      c.style.borderColor = '';
-      c.style.background = '';
-      c.classList.remove('selected');
-    });
-    result.innerHTML = '';
-  }
-
-  // Wire chips
-  chips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      if (chip.classList.contains('selected')) {
-        clearCompare();
-      } else {
-        doCompare(chip.dataset.key);
-      }
-    });
-  });
-
-  // Wire search input
   if (searchInput && searchDd) {
     let timer = null;
 
     searchInput.addEventListener('input', () => {
       clearTimeout(timer);
-      timer = setTimeout(() => {
-        const q = searchInput.value.trim().toLowerCase().replace(/[-_ ]/g, '');
-        if (!q) { searchDd.classList.remove('open'); return; }
-
-        const matches = gpus.filter(([key, gpu]) => {
-          if (key === currentKey) return false;
-          const k = key.replace(/_/g, '');
-          const n = gpu.name.toLowerCase().replace(/[-_ ]/g, '');
-          return k.includes(q) || n.includes(q);
-        }).slice(0, 10);
-
-        if (!matches.length) { searchDd.classList.remove('open'); return; }
-
-        let html = '';
-        for (const [key, gpu] of matches) {
-          html += `<div class="dd-item" data-key="${esc(key)}" style="cursor:pointer">
-            <div class="dd-name">${esc(gpu.name)}</div>
-            <div class="dd-hint">${gpu.vram_gb}GB \u00b7 ${esc(gpu.vendor)}</div>
-          </div>`;
-        }
-        searchDd.innerHTML = html;
-        searchDd.classList.add('open');
-
-        searchDd.querySelectorAll('.dd-item').forEach(el => {
-          el.addEventListener('mouseenter', () => {
-            searchDd.querySelectorAll('.dd-item').forEach(x => x.classList.remove('hl'));
-            el.classList.add('hl');
-          });
-          el.addEventListener('click', () => {
-            searchDd.classList.remove('open');
-            searchInput.value = '';
-            doCompare(el.dataset.key);
-          });
-        });
-      }, 150);
+      timer = setTimeout(() => showDropdown(searchInput.value.trim()), 150);
     });
 
-    searchInput.addEventListener('focus', () => {
-      if (searchInput.value.trim()) searchInput.dispatchEvent(new Event('input'));
-    });
+    searchInput.addEventListener('focus', () => showDropdown(searchInput.value.trim()));
 
     document.addEventListener('click', e => {
       if (!e.target.closest('#hw-compare-search') && !e.target.closest('#hw-compare-search-dd')) {
@@ -529,6 +481,7 @@ function renderComparison(result, container, currentGpu, otherGpu) {
       <th>Model</th><th>Params</th>
       <th colspan="3" style="text-align:center;border-left:2px solid var(--bd)">${esc(currentGpu.name)}</th>
       <th colspan="3" style="text-align:center;border-left:2px solid var(--bd)">${esc(otherGpu.name)}</th>
+      <th rowspan="2" style="border-left:2px solid var(--bd);text-align:center">vs</th>
     </tr>
     <tr>
       <th></th><th></th>
@@ -552,8 +505,20 @@ function renderComparison(result, container, currentGpu, otherGpu) {
     const noA = !bestA ? 'color:var(--dm)' : '';
     const noB = !bestB ? 'color:var(--dm)' : '';
 
+    let ratio = '';
+    if (decA && decB) {
+      const r = decA / decB;
+      const color = r >= 1.05 ? 'var(--gn)' : r <= 0.95 ? 'var(--rd)' : 'var(--dm)';
+      const label = r >= 0.95 && r <= 1.05 ? '~1x' : r.toFixed(1) + 'x';
+      ratio = `<span style="color:${color};font-weight:600">${label}</span>`;
+    } else if (decA && !decB) {
+      ratio = `<span style="color:var(--dm)">only</span>`;
+    } else if (!decA && decB) {
+      ratio = `<span style="color:var(--dm)">\u2014</span>`;
+    }
+
     html += `<tr>
-      <td class="name"><a class="link" href="#/model/${esc(ref.id)}">${esc(ref.short)}</a></td>
+      <td class="name"><a class="link" href="#/model/${esc(ref.id)}" data-tip="${esc(ref.id + ' \u00b7 ' + fmtP(ref.params) + ' params')}">${esc(ref.short)}</a></td>
       <td>${fmtP(ref.params)}</td>
       <td style="border-left:2px solid var(--bd);${noA}">${bestA ? bestA.quant : '\u2014'}</td>
       <td class="${decACls}" style="${noA}">${decA ? Math.round(decA) + ' tok/s' : '\u2014'}</td>
@@ -561,6 +526,7 @@ function renderComparison(result, container, currentGpu, otherGpu) {
       <td style="border-left:2px solid var(--bd);${noB}">${bestB ? bestB.quant : '\u2014'}</td>
       <td class="${decBCls}" style="${noB}">${decB ? Math.round(decB) + ' tok/s' : '\u2014'}</td>
       <td style="${noB}">${bestB?.prefill ? fmtTokS(bestB.prefill) : '\u2014'}</td>
+      <td style="border-left:2px solid var(--bd);text-align:center;font-size:10px">${ratio}</td>
     </tr>`;
   }
 
@@ -612,7 +578,7 @@ function renderModelTable(gpu) {
     for (const m of comfortable) {
       const rt = multiRuntime ? ` (${m.best.runtime})` : '';
       html += `<tr>
-        <td class="name"><a class="link" href="#/model/${esc(m.id)}">${esc(m.short)}</a></td>
+        <td class="name"><a class="link" href="#/model/${esc(m.id)}" data-tip="${esc(m.id + ' \u00b7 ' + fmtP(m.params) + ' params')}">${esc(m.short)}</a></td>
         <td>${fmtP(m.params)}</td>
         <td>${m.best.quant || ''}</td>
         <td>${m.best.weight_gb.toFixed(0)} GB</td>
@@ -627,7 +593,7 @@ function renderModelTable(gpu) {
     for (const m of tight) {
       const rt = multiRuntime ? ` (${m.best.runtime})` : '';
       html += `<tr>
-        <td class="name"><a class="link" href="#/model/${esc(m.id)}">${esc(m.short)}</a></td>
+        <td class="name"><a class="link" href="#/model/${esc(m.id)}" data-tip="${esc(m.id + ' \u00b7 ' + fmtP(m.params) + ' params')}">${esc(m.short)}</a></td>
         <td>${fmtP(m.params)}</td>
         <td>${m.best.quant || ''}</td>
         <td>${m.best.weight_gb.toFixed(0)} GB</td>
@@ -642,7 +608,7 @@ function renderModelTable(gpu) {
     for (const m of wontRun) {
       const w = (m.params * 0.5 / 1e9).toFixed(0);
       html += `<tr>
-        <td class="name" style="color:var(--dm)">${esc(m.short)}</td>
+        <td class="name" style="color:var(--dm)" data-tip="${esc(m.id + ' \u00b7 ' + fmtP(m.params) + ' params')}">${esc(m.short)}</td>
         <td style="color:var(--dm)">${fmtP(m.params)}</td>
         <td style="color:var(--dm)">\u2014</td>
         <td style="color:var(--dm)">${w} GB</td>
@@ -666,7 +632,9 @@ function renderCloudRentals(gpuKey, gpu) {
 
   let cards = '';
   for (const [, o] of matching.slice(0, 5)) {
-    cards += `<a class="rent-card" href="${esc(o.url)}" target="_blank" rel="noopener">
+    const spotInfo = o.spot_hr ? ' · Spot: $' + o.spot_hr.toFixed(2) + '/hr' : '';
+    const regionInfo = o.region ? ' · ' + o.region.join(', ') : '';
+    cards += `<a class="rent-card" href="${esc(o.url)}" target="_blank" rel="noopener" data-tip="${esc(o.name + spotInfo + regionInfo)}">
       <div class="rn">${esc(o.provider)}</div>
       <div class="rp">${esc(o.name)}</div>
       <div class="rc">$${o.price_hr.toFixed(2)}/hr</div>
@@ -694,7 +662,7 @@ function renderElectricityCost(gpu) {
     if (!fitting.length) continue;
     const best = fitting.reduce((a, b) => (a.decode || 0) > (b.decode || 0) ? a : b);
     const costPerM = wasm.costPerMillion(elecCostHr, best.decode);
-    entries.push({ short: m.short, quant: best.quant, decode: best.decode, costPerM });
+    entries.push({ id: m.id, short: m.short, params: m.params, quant: best.quant, decode: best.decode, costPerM });
   }
   entries.sort((a, b) => a.costPerM - b.costPerM);
 
@@ -710,7 +678,7 @@ function renderElectricityCost(gpu) {
     const e = entries[i];
     const cls = i === 0 ? 'cc-best' : '';
     html += `<tr>
-      <td class="name">${esc(e.short)}</td>
+      <td class="name" data-tip="${esc(e.id + ' \u00b7 ' + fmtP(e.params) + ' params')}">${esc(e.short)}</td>
       <td>${e.quant}</td>
       <td>${Math.round(e.decode)} tok/s</td>
       <td class="${cls}">$${e.costPerM.toFixed(3)}</td>

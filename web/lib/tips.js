@@ -1,4 +1,6 @@
 // Tooltip helpers for hover info across views.
+// Global floating tooltip: any element with data-tip="text" gets a styled tooltip on hover.
+// Also supports tip() helper that sets data-tip inline.
 
 import * as wasm from './wasm.js';
 import { state } from '../app.js';
@@ -17,11 +19,45 @@ function fmtP(n) {
   return `${(n / 1e3).toFixed(0)}K`;
 }
 
-/// Wrap content in a tooltip span. `lines` is an array of strings.
+// Global floating tooltip element (created once, positioned via JS)
+let tipEl = null;
+
+export function initGlobalTip() {
+  tipEl = document.createElement('div');
+  tipEl.className = 'gtip';
+  document.body.appendChild(tipEl);
+
+  document.addEventListener('mouseover', e => {
+    const target = e.target.closest('[data-tip]');
+    if (!target) { tipEl.style.display = 'none'; return; }
+    const text = target.dataset.tip;
+    if (!text) { tipEl.style.display = 'none'; return; }
+    tipEl.innerHTML = esc(text).replace(/ · /g, ' &middot; ').replace(/\n/g, '<br>');
+    tipEl.style.display = 'block';
+    const rect = target.getBoundingClientRect();
+    const tipRect = tipEl.getBoundingClientRect();
+    let left = rect.left + rect.width / 2 - tipRect.width / 2;
+    if (left < 4) left = 4;
+    if (left + tipRect.width > window.innerWidth - 4) left = window.innerWidth - 4 - tipRect.width;
+    let top = rect.top - tipRect.height - 6;
+    if (top < 4) top = rect.bottom + 6;
+    tipEl.style.left = left + 'px';
+    tipEl.style.top = top + 'px';
+  });
+
+  document.addEventListener('mouseout', e => {
+    const target = e.target.closest('[data-tip]');
+    if (target && !target.contains(e.relatedTarget)) {
+      tipEl.style.display = 'none';
+    }
+  });
+}
+
+/// Wrap content with data-tip attribute. `lines` is an array of strings.
 export function tip(innerHtml, lines) {
   if (!lines || !lines.length) return innerHtml;
-  const tipContent = lines.map(l => esc(l)).join('<br>');
-  return `<span class="tip-wrap">${innerHtml}<span class="tip">${tipContent}</span></span>`;
+  const text = lines.join(' \u00b7 ');
+  return `<span data-tip="${esc(text)}">${innerHtml}</span>`;
 }
 
 /// Build tooltip lines for a hardware key.

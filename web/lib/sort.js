@@ -80,7 +80,18 @@ function cellValue(td) {
   const gbMatch = text.match(/^([0-9.]+)\s*GB/);
   if (gbMatch) return parseFloat(gbMatch[1]);
 
-  // Plain number
+  // Number with suffix: 4.1M, 1.2k, 70.6B, 700
+  const suffMatch = text.match(/^([0-9.]+)\s*([kmb])?$/i);
+  if (suffMatch) {
+    let v = parseFloat(suffMatch[1]);
+    const s = (suffMatch[2] || '').toLowerCase();
+    if (s === 'k') v *= 1e3;
+    if (s === 'm') v *= 1e6;
+    if (s === 'b') v *= 1e9;
+    if (!isNaN(v)) return v;
+  }
+
+  // Plain number with commas
   const num = parseFloat(text.replace(/,/g, ''));
   if (!isNaN(num) && /^[0-9.,]+$/.test(text.replace(/\s/g, ''))) return num;
 

@@ -1,6 +1,6 @@
 # Cloud GPU rental pricing registry.
 # Curated from provider pricing pages.
-# Generated: 2026-02-21
+# Generated: 2026-02-23
 #
 # gpu: references a key in hardware.toml (soft link, not validated at parse time)
 # price_hr: on-demand USD/hr per GPU (community/marketplace tier where applicable)
@@ -327,3 +327,519 @@ gpu_count = 1
 price_hr = 2.40
 region = ["US", "EU"]
 url = "https://www.hyperstack.cloud/gpu-pricing"
+
+# ── FluidStack ──
+
+[cloud.fluidstack_h200_1x]
+name = "FluidStack 1x H200 SXM"
+provider = "fluidstack"
+gpu = "h200_sxm_141_gb"
+gpu_count = 1
+price_hr = 2.30
+region = ["EU"]
+url = "https://www.fluidstack.io/resources/pricing"
+
+[cloud.fluidstack_h100_1x]
+name = "FluidStack 1x H100 SXM"
+provider = "fluidstack"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 2.10
+region = ["EU"]
+url = "https://www.fluidstack.io/resources/pricing"
+
+[cloud.fluidstack_a100_sxm_1x]
+name = "FluidStack 1x A100 SXM 80GB"
+provider = "fluidstack"
+gpu = "a100_sxm4_80_gb"
+gpu_count = 1
+price_hr = 1.30
+region = ["EU"]
+url = "https://www.fluidstack.io/resources/pricing"
+
+[cloud.fluidstack_a100_pcie_1x]
+name = "FluidStack 1x A100 PCIe 40GB"
+provider = "fluidstack"
+gpu = "a100_pcie_40_gb"
+gpu_count = 1
+price_hr = 1.80
+region = ["EU"]
+url = "https://www.fluidstack.io/resources/pricing"
+
+# ── Paperspace (DigitalOcean) ──
+
+[cloud.paperspace_h100_1x]
+name = "Paperspace 1x H100"
+provider = "paperspace"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 5.95
+region = ["US", "EU"]
+url = "https://www.paperspace.com/pricing"
+
+[cloud.paperspace_a100_80_1x]
+name = "Paperspace 1x A100 80GB"
+provider = "paperspace"
+gpu = "a100_sxm4_80_gb"
+gpu_count = 1
+price_hr = 3.18
+region = ["US", "EU"]
+url = "https://www.paperspace.com/pricing"
+
+[cloud.paperspace_a100_40_1x]
+name = "Paperspace 1x A100 40GB"
+provider = "paperspace"
+gpu = "a100_sxm4_40_gb"
+gpu_count = 1
+price_hr = 3.09
+region = ["US", "EU"]
+url = "https://www.paperspace.com/pricing"
+
+[cloud.paperspace_a6000_1x]
+name = "Paperspace 1x A6000"
+provider = "paperspace"
+gpu = "rtx_a6000"
+gpu_count = 1
+price_hr = 1.89
+region = ["US", "EU"]
+url = "https://www.paperspace.com/pricing"
+
+[cloud.paperspace_a4000_1x]
+name = "Paperspace 1x A4000"
+provider = "paperspace"
+gpu = "rtx_a4000"
+gpu_count = 1
+price_hr = 0.76
+region = ["US", "EU"]
+url = "https://www.paperspace.com/pricing"
+
+# ── DataCrunch (Verda) ──
+
+[cloud.datacrunch_b200_1x]
+name = "DataCrunch 1x B200 SXM"
+provider = "datacrunch"
+gpu = "b200"
+gpu_count = 1
+price_hr = 3.99
+region = ["EU"]
+url = "https://verda.com/pricing"
+
+[cloud.datacrunch_h200_1x]
+name = "DataCrunch 1x H200 SXM"
+provider = "datacrunch"
+gpu = "h200_sxm_141_gb"
+gpu_count = 1
+price_hr = 2.59
+region = ["EU"]
+url = "https://verda.com/pricing"
+
+[cloud.datacrunch_h100_1x]
+name = "DataCrunch 1x H100 SXM"
+provider = "datacrunch"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 1.99
+region = ["EU"]
+url = "https://verda.com/pricing"
+
+[cloud.datacrunch_a100_sxm_1x]
+name = "DataCrunch 1x A100 SXM 80GB"
+provider = "datacrunch"
+gpu = "a100_sxm4_80_gb"
+gpu_count = 1
+price_hr = 1.16
+region = ["EU"]
+url = "https://verda.com/pricing"
+
+[cloud.datacrunch_a6000_1x]
+name = "DataCrunch 1x RTX A6000"
+provider = "datacrunch"
+gpu = "rtx_a6000"
+gpu_count = 1
+price_hr = 0.47
+region = ["EU"]
+url = "https://verda.com/pricing"
+
+# ── TensorDock ──
+
+[cloud.tensordock_h100_1x]
+name = "TensorDock 1x H100 SXM"
+provider = "tensordock"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 2.25
+region = ["US", "EU", "APAC"]
+url = "https://www.tensordock.com/"
+
+[cloud.tensordock_a100_sxm_1x]
+name = "TensorDock 1x A100 SXM 80GB"
+provider = "tensordock"
+gpu = "a100_sxm4_80_gb"
+gpu_count = 1
+price_hr = 1.80
+region = ["US", "EU", "APAC"]
+url = "https://www.tensordock.com/"
+
+[cloud.tensordock_a100_pcie_1x]
+name = "TensorDock 1x A100 PCIe 40GB"
+provider = "tensordock"
+gpu = "a100_pcie_40_gb"
+gpu_count = 1
+price_hr = 1.50
+region = ["US", "EU", "APAC"]
+url = "https://www.tensordock.com/"
+
+[cloud.tensordock_a6000_1x]
+name = "TensorDock 1x RTX A6000"
+provider = "tensordock"
+gpu = "rtx_a6000"
+gpu_count = 1
+price_hr = 0.45
+region = ["US", "EU", "APAC"]
+url = "https://www.tensordock.com/"
+
+[cloud.tensordock_rtx_4090_1x]
+name = "TensorDock 1x RTX 4090"
+provider = "tensordock"
+gpu = "rtx_4090"
+gpu_count = 1
+price_hr = 0.37
+spot_hr = 0.20
+region = ["US", "EU", "APAC"]
+url = "https://www.tensordock.com/"
+
+[cloud.tensordock_rtx_3090_1x]
+name = "TensorDock 1x RTX 3090"
+provider = "tensordock"
+gpu = "rtx_3090"
+gpu_count = 1
+price_hr = 0.20
+region = ["US", "EU", "APAC"]
+url = "https://www.tensordock.com/"
+
+# ── Vultr ──
+
+[cloud.vultr_b200_1x]
+name = "Vultr 1x B200 HGX"
+provider = "vultr"
+gpu = "b200"
+gpu_count = 1
+price_hr = 2.99
+region = ["US", "EU", "APAC"]
+url = "https://www.vultr.com/pricing/#cloud-gpu"
+
+[cloud.vultr_h100_1x]
+name = "Vultr 1x H100"
+provider = "vultr"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 2.99
+region = ["US", "EU", "APAC"]
+url = "https://www.vultr.com/pricing/#cloud-gpu"
+
+[cloud.vultr_a100_sxm_1x]
+name = "Vultr 1x A100 HGX 80GB"
+provider = "vultr"
+gpu = "a100_sxm4_80_gb"
+gpu_count = 1
+price_hr = 2.80
+region = ["US", "EU", "APAC"]
+url = "https://www.vultr.com/pricing/#cloud-gpu"
+
+[cloud.vultr_a100_pcie_1x]
+name = "Vultr 1x A100 PCIe 40GB"
+provider = "vultr"
+gpu = "a100_pcie_40_gb"
+gpu_count = 1
+price_hr = 2.40
+region = ["US", "EU", "APAC"]
+url = "https://www.vultr.com/pricing/#cloud-gpu"
+
+# ── Genesis Cloud ──
+
+[cloud.genesis_b200_1x]
+name = "Genesis Cloud 1x B200"
+provider = "genesis"
+gpu = "b200"
+gpu_count = 1
+price_hr = 2.80
+region = ["EU", "US"]
+url = "https://www.genesiscloud.com/pricing"
+
+[cloud.genesis_h200_1x]
+name = "Genesis Cloud 1x H200"
+provider = "genesis"
+gpu = "h200_sxm_141_gb"
+gpu_count = 1
+price_hr = 2.80
+region = ["EU", "US"]
+url = "https://www.genesiscloud.com/pricing"
+
+[cloud.genesis_h100_1x]
+name = "Genesis Cloud 1x H100 SXM"
+provider = "genesis"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 1.60
+region = ["EU", "US"]
+url = "https://www.genesiscloud.com/pricing"
+
+[cloud.genesis_rtx_4090_1x]
+name = "Genesis Cloud 1x RTX 4090"
+provider = "genesis"
+gpu = "rtx_4090"
+gpu_count = 1
+price_hr = 0.55
+region = ["EU"]
+url = "https://www.genesiscloud.com/pricing"
+
+[cloud.genesis_rtx_3090_1x]
+name = "Genesis Cloud 1x RTX 3090"
+provider = "genesis"
+gpu = "rtx_3090"
+gpu_count = 1
+price_hr = 0.20
+region = ["EU"]
+url = "https://www.genesiscloud.com/pricing"
+
+# ── SF Compute ──
+
+[cloud.sfcompute_h100_1x]
+name = "SF Compute 1x H100 SXM"
+provider = "sfcompute"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 1.50
+region = ["US"]
+url = "https://sfcompute.com/prices"
+
+# ── Crusoe Energy ──
+
+[cloud.crusoe_h200_1x]
+name = "Crusoe 1x H200"
+provider = "crusoe"
+gpu = "h200_sxm_141_gb"
+gpu_count = 1
+price_hr = 4.29
+region = ["US", "EU"]
+url = "https://www.crusoe.ai/cloud/pricing"
+
+[cloud.crusoe_h100_1x]
+name = "Crusoe 1x H100 SXM"
+provider = "crusoe"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 3.90
+spot_hr = 1.60
+region = ["US", "EU"]
+url = "https://www.crusoe.ai/cloud/pricing"
+
+[cloud.crusoe_a100_sxm_1x]
+name = "Crusoe 1x A100 SXM 80GB"
+provider = "crusoe"
+gpu = "a100_sxm4_80_gb"
+gpu_count = 1
+price_hr = 1.95
+region = ["US", "EU"]
+url = "https://www.crusoe.ai/cloud/pricing"
+
+[cloud.crusoe_a100_pcie_80_1x]
+name = "Crusoe 1x A100 PCIe 80GB"
+provider = "crusoe"
+gpu = "a100_pcie_80_gb"
+gpu_count = 1
+price_hr = 1.65
+region = ["US", "EU"]
+url = "https://www.crusoe.ai/cloud/pricing"
+
+[cloud.crusoe_a100_pcie_40_1x]
+name = "Crusoe 1x A100 PCIe 40GB"
+provider = "crusoe"
+gpu = "a100_pcie_40_gb"
+gpu_count = 1
+price_hr = 1.45
+region = ["US", "EU"]
+url = "https://www.crusoe.ai/cloud/pricing"
+
+[cloud.crusoe_a40_1x]
+name = "Crusoe 1x A40"
+provider = "crusoe"
+gpu = "a40_pcie"
+gpu_count = 1
+price_hr = 0.90
+region = ["US", "EU"]
+url = "https://www.crusoe.ai/cloud/pricing"
+
+# ── Modal (serverless, per-second billing) ──
+
+[cloud.modal_b200_1x]
+name = "Modal 1x B200"
+provider = "modal"
+gpu = "b200"
+gpu_count = 1
+price_hr = 6.25
+region = ["US", "EU", "APAC"]
+url = "https://modal.com/pricing"
+
+[cloud.modal_h200_1x]
+name = "Modal 1x H200"
+provider = "modal"
+gpu = "h200_sxm_141_gb"
+gpu_count = 1
+price_hr = 4.54
+region = ["US", "EU", "APAC"]
+url = "https://modal.com/pricing"
+
+[cloud.modal_h100_1x]
+name = "Modal 1x H100"
+provider = "modal"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 3.95
+region = ["US", "EU", "APAC"]
+url = "https://modal.com/pricing"
+
+[cloud.modal_a100_80_1x]
+name = "Modal 1x A100 80GB"
+provider = "modal"
+gpu = "a100_sxm4_80_gb"
+gpu_count = 1
+price_hr = 2.50
+region = ["US", "EU", "APAC"]
+url = "https://modal.com/pricing"
+
+[cloud.modal_a100_40_1x]
+name = "Modal 1x A100 40GB"
+provider = "modal"
+gpu = "a100_sxm4_40_gb"
+gpu_count = 1
+price_hr = 2.10
+region = ["US", "EU", "APAC"]
+url = "https://modal.com/pricing"
+
+# ── Nebius (cloud GPU rentals) ──
+
+[cloud.nebius_b200_1x]
+name = "Nebius 1x B200 HGX"
+provider = "nebius"
+gpu = "b200"
+gpu_count = 1
+price_hr = 5.50
+region = ["EU", "US"]
+url = "https://nebius.com/prices"
+
+[cloud.nebius_h200_1x]
+name = "Nebius 1x H200 HGX"
+provider = "nebius"
+gpu = "h200_sxm_141_gb"
+gpu_count = 1
+price_hr = 3.50
+region = ["EU", "US"]
+url = "https://nebius.com/prices"
+
+[cloud.nebius_h100_1x]
+name = "Nebius 1x H100 HGX"
+provider = "nebius"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 2.95
+region = ["EU", "US"]
+url = "https://nebius.com/prices"
+
+# ── Scaleway ──
+
+[cloud.scaleway_h100_pcie_1x]
+name = "Scaleway 1x H100 PCIe"
+provider = "scaleway"
+gpu = "h100_pcie_80_gb"
+gpu_count = 1
+price_hr = 2.95
+region = ["EU"]
+url = "https://www.scaleway.com/en/pricing/gpu/"
+
+# ── Together AI (instant clusters) ──
+
+[cloud.together_b200_1x]
+name = "Together AI 1x B200"
+provider = "together"
+gpu = "b200"
+gpu_count = 1
+price_hr = 5.50
+region = ["US"]
+url = "https://www.together.ai/pricing"
+
+[cloud.together_h200_1x]
+name = "Together AI 1x H200"
+provider = "together"
+gpu = "h200_sxm_141_gb"
+gpu_count = 1
+price_hr = 3.79
+region = ["US"]
+url = "https://www.together.ai/pricing"
+
+[cloud.together_h100_1x]
+name = "Together AI 1x H100 SXM"
+provider = "together"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 2.99
+region = ["US"]
+url = "https://www.together.ai/pricing"
+
+# ── Massed Compute ──
+
+[cloud.massed_h100_pcie_1x]
+name = "Massed Compute 1x H100 PCIe"
+provider = "massed"
+gpu = "h100_pcie_80_gb"
+gpu_count = 1
+price_hr = 2.35
+region = ["US"]
+url = "https://massedcompute.com/home-old/pricing/"
+
+[cloud.massed_a100_sxm_1x]
+name = "Massed Compute 1x A100 SXM 80GB"
+provider = "massed"
+gpu = "a100_sxm4_80_gb"
+gpu_count = 1
+price_hr = 1.23
+region = ["US"]
+url = "https://massedcompute.com/home-old/pricing/"
+
+[cloud.massed_a100_pcie_1x]
+name = "Massed Compute 1x A100 PCIe 80GB"
+provider = "massed"
+gpu = "a100_pcie_80_gb"
+gpu_count = 1
+price_hr = 1.20
+region = ["US"]
+url = "https://massedcompute.com/home-old/pricing/"
+
+[cloud.massed_a6000_1x]
+name = "Massed Compute 1x A6000"
+provider = "massed"
+gpu = "rtx_a6000"
+gpu_count = 1
+price_hr = 0.54
+region = ["US"]
+url = "https://massedcompute.com/home-old/pricing/"
+
+[cloud.massed_a40_1x]
+name = "Massed Compute 1x A40"
+provider = "massed"
+gpu = "a40_pcie"
+gpu_count = 1
+price_hr = 0.51
+region = ["US"]
+url = "https://massedcompute.com/home-old/pricing/"
+
+# ── Latitude.sh ──
+
+[cloud.latitude_h100_1x]
+name = "Latitude.sh 1x H100"
+provider = "latitude"
+gpu = "h100_sxm5_80_gb"
+gpu_count = 1
+price_hr = 1.66
+region = ["US"]
+url = "https://www.latitude.sh/pricing"

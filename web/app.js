@@ -3,6 +3,7 @@
 import * as wasm from './lib/wasm.js';
 import * as router from './lib/router.js';
 import * as search from './lib/search.js';
+import { initGlobalTip } from './lib/tips.js';
 import { render as renderTrending } from './views/trending.js';
 import { render as renderModel } from './views/model.js';
 import { render as renderHardware } from './views/hardware.js';
@@ -10,6 +11,8 @@ import { render as renderProvider } from './views/provider.js';
 import { render as renderBrowseModels } from './views/browse-models.js';
 import { render as renderBrowseHw } from './views/browse-hw.js';
 import { render as renderBrowseProviders } from './views/browse-providers.js';
+import { render as renderBrowseCloud } from './views/browse-cloud.js';
+import { render as renderStats } from './views/stats.js';
 
 export const state = {
   hardware: null,
@@ -41,8 +44,8 @@ async function boot() {
     const modelCount = state.models ? state.models.length : '';
     const sub = document.getElementById('hero-sub');
     if (sub) {
-      sub.textContent = `19 providers · ${state.hardware.length} hardware configs · ${state.cloud.length} cloud offerings`
-        + (modelCount ? ` · ${modelCount} models` : '') + ' — compared in one place';
+      sub.innerHTML = `<a href="#/providers">19 providers</a> · <a href="#/hardware">${state.hardware.length} hardware configs</a> · <a href="#/cloud">${state.cloud.length} cloud offerings</a>`
+        + (modelCount ? ` · <a href="#/models">${modelCount} models</a>` : '') + ' \u2014 compared in one place';
     }
   } catch (err) {
     content.innerHTML = `<div class="loading">Failed to load: ${err.message}</div>`;
@@ -54,12 +57,15 @@ async function boot() {
   router.register(/^\/models$/, renderBrowseModels);
   router.register(/^\/hardware$/, renderBrowseHw);
   router.register(/^\/providers$/, renderBrowseProviders);
+  router.register(/^\/cloud$/, renderBrowseCloud);
+  router.register(/^\/stats$/, renderStats);
   router.register(/^\/model\/(.+)$/, renderModel);
   router.register(/^\/hw\/(.+)$/, renderHardware);
   router.register(/^\/provider\/(.+)$/, renderProvider);
 
-  // Init search
+  // Init search + global tooltips
   search.init();
+  initGlobalTip();
 
   // Start routing
   router.start();

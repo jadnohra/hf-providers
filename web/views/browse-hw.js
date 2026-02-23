@@ -24,7 +24,7 @@ export function render(container) {
 
   for (const [key, gpu] of gpus) {
     html += `<tr>
-      <td class="name"><a class="link" href="#/hw/${esc(key)}">${esc(gpu.name)}</a></td>
+      <td class="name"><a class="link" href="#/hw/${esc(key)}" data-tip="${esc(gpu.vram_gb + ' GB VRAM \u00b7 ' + Math.round(gpu.mem_bw_gb_s) + ' GB/s \u00b7 ' + gpu.fp16_tflops.toFixed(1) + ' TFLOPS \u00b7 ' + gpu.tdp_w + 'W' + (gpu.street_usd ? ' \u00b7 ~$' + gpu.street_usd.toLocaleString() : ''))}">${esc(gpu.name)}</a></td>
       <td>${esc(gpu.vendor)}</td>
       <td>${gpu.vram_gb} GB</td>
       <td>${Math.round(gpu.mem_bw_gb_s)}</td>

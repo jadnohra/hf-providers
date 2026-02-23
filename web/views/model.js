@@ -97,18 +97,11 @@ function renderModel(container, model) {
   html += `<span class="mp">${fmtNum(model.downloads)} downloads</span>`;
   html += '</div>';
 
+  // Variants section (related models from same org)
+  html += renderVariants(model);
+
   // Providers section
   html += renderProviders(model);
-
-  // Hardware estimation cards
-  if (params) {
-    html += renderHardwareCards(model, params);
-  } else {
-    html += `<div class="sec">
-      <div class="sec-head"><span class="sec-q">What can my hardware run?</span><div class="sec-line"></div></div>
-      <div style="color:var(--dm);font-size:11px">No parameter count available for this model</div>
-    </div>`;
-  }
 
   // Cost comparison
   if (params) {
@@ -116,6 +109,16 @@ function renderModel(container, model) {
   } else {
     html += `<div class="sec">
       <div class="sec-head"><span class="sec-q">What's the cheapest way to run it?</span><div class="sec-line"></div></div>
+      <div style="color:var(--dm);font-size:11px">No parameter count available for this model</div>
+    </div>`;
+  }
+
+  // Hardware estimation cards
+  if (params) {
+    html += renderHardwareCards(model, params);
+  } else {
+    html += `<div class="sec">
+      <div class="sec-head"><span class="sec-q">What can my hardware run?</span><div class="sec-line"></div></div>
       <div style="color:var(--dm);font-size:11px">No parameter count available for this model</div>
     </div>`;
   }
@@ -152,9 +155,6 @@ function renderProviders(model) {
 
   html += `</tbody></table>`;
 
-  // Variants bar
-  html += renderVariants(model);
-
   // Snippet preview (first live provider)
   const firstProv = providers[0];
   html += renderSnippet(model.id, firstProv.name);
@@ -164,17 +164,46 @@ function renderProviders(model) {
 }
 
 function renderVariants(model) {
-  const id = model.id;
-  const parts = id.split('/');
+  // Find related variants from cache (exclude quantization repacks)
+  if (!state.models) return '';
+  const parts = model.id.split('/');
   if (parts.length < 2) return '';
   const org = parts[0];
   const name = parts.slice(1).join('/');
 
-  const baseName = name.replace(/-Instruct$|-it$|-Chat$/, '');
-  if (baseName === name) return '';
+  const SUFFIXES = /-Instruct$|-it$|-Chat$|-GGUF$|-AWQ$|-GPTQ$|-fp8$|-BF16$|-EXL2$|-MLX$/i;
+  const QUANT_RE = /GGUF|AWQ|GPTQ|EXL2|MLX|fp8|BF16/i;
+  const baseName = name.replace(SUFFIXES, '');
 
-  return `<div class="variants"><span>Related:</span>
-    <a class="var-link" href="#/model/${esc(org)}/${esc(baseName)}">${esc(baseName)}</a>
+  const variants = state.models.filter(m => {
+    if (m.id === model.id) return false;
+    if (!m.id.startsWith(org + '/')) return false;
+    const mName = m.id.split('/').slice(1).join('/');
+    if (QUANT_RE.test(mName)) return false;  // skip quantization repacks
+    const mBase = mName.replace(SUFFIXES, '');
+    return mBase === baseName || baseName.startsWith(mBase + '-') || mBase.startsWith(baseName + '-');
+  }).slice(0, 8);
+
+  if (!variants.length) return '';
+
+  let chips = '';
+  for (const v of variants) {
+    const vName = v.id.split('/').slice(1).join('/');
+    const params = v.safetensors?.total;
+    const provCount = Array.isArray(v.inferenceProviderMapping)
+      ? v.inferenceProviderMapping.filter(p => p.status === 'live').length : 0;
+    let hint = '';
+    if (params) hint += fmtP(params);
+    if (provCount) hint += (hint ? ' \u00b7 ' : '') + provCount + ' providers';
+    chips += `<a class="var-chip" href="#/model/${esc(v.id)}" data-tip="${esc(v.id)}">
+      <div class="pn">${esc(vName)}</div>
+      ${hint ? `<div class="pm">${esc(hint)}</div>` : ''}
+    </a>`;
+  }
+
+  return `<div class="sec" style="margin-bottom:12px">
+    <div class="sec-head"><span class="sec-q">Related variants</span><div class="sec-line"></div></div>
+    <div class="variants-sec">${chips}</div>
   </div>`;
 }
 
@@ -193,7 +222,7 @@ function providerRows(providers) {
       data-price="${p.outputPrice ?? 999999}"
       data-throughput="${p.throughput ?? 0}">
       <td><span class="dt ${dotClass}"></span><span class="sl ${slClass}">${r}</span>${ttft ? `<span class="ttft">${ttft}</span>` : ''}</td>
-      <td class="name"><a class="link" href="#/provider/${esc(p.name)}">${esc(p.name)}</a></td>
+      <td class="name"><a class="link" href="#/provider/${esc(p.name)}" data-tip="${esc(provTitle(p))}">${esc(p.name)}</a></td>
       <td>${p.inputPrice != null ? '$' + p.inputPrice.toFixed(2) : ''}</td>
       <td>${p.outputPrice != null ? '$' + p.outputPrice.toFixed(2) : ''}</td>
       <td>${p.throughput != null ? Math.round(p.throughput) + ' tok/s' : ''}</td>
@@ -291,8 +320,17 @@ function renderCostComparison(model, params) {
 
   // Gather API data
   const apiData = model.providers
-    .filter(p => p.status === 'live' && (p.outputPrice != null || p.throughput != null))
-    .map(p => ({ name: p.name, price: p.outputPrice, tok: p.throughput }));
+    .filter(p => p.status === 'live')
+    .map(p => ({
+      name: p.name, price: p.outputPrice, tok: p.throughput,
+      href: '#/provider/' + p.name,
+      tipLines: [
+        p.inputPrice != null ? '$' + p.inputPrice.toFixed(2) + '/1M input' : null,
+        p.outputPrice != null ? '$' + p.outputPrice.toFixed(2) + '/1M output' : null,
+        p.throughput != null ? Math.round(p.throughput) + ' tok/s' : null,
+        p.latency != null ? Math.round(p.latency * 1000) + 'ms TTFT' : null,
+      ].filter(Boolean)
+    }));
 
   // Gather cloud data
   const cloudData = [];
@@ -315,7 +353,19 @@ function renderCostComparison(model, params) {
     }
     if (bestDecode > 0) {
       const costPerM = wasm.costPerMillion(offering.price_hr * offering.gpu_count, bestDecode);
-      cloudData.push({ name: `${offering.gpu} \u00b7 ${offering.provider}`, price: costPerM, tok: bestDecode });
+      const gpuLabel = offering.gpu_count > 1 ? offering.gpu_count + 'x ' + gpu.name : gpu.name;
+      cloudData.push({
+        name: gpuLabel + ' \u00b7 ' + offering.provider,
+        price: costPerM, tok: bestDecode,
+        href: offering.url || '#/hw/' + offering.gpu,
+        external: !!offering.url,
+        tipLines: [
+          offering.name,
+          '$' + (offering.price_hr * offering.gpu_count).toFixed(2) + '/hr',
+          gpu.vram_gb * offering.gpu_count + ' GB VRAM \u00b7 ' + Math.round(gpu.mem_bw_gb_s) + ' GB/s',
+          Math.round(bestDecode) + ' tok/s estimated decode',
+        ]
+      });
     }
   }
 
@@ -336,7 +386,16 @@ function renderCostComparison(model, params) {
     }
     if (bestDecode > 0) {
       const costPerM = wasm.costPerMillion((gpu.tdp_w / 1000) * elecRate, bestDecode);
-      localData.push({ name: gpu.name, price: costPerM, tok: bestDecode });
+      localData.push({
+        name: gpu.name, price: costPerM, tok: bestDecode,
+        href: '#/hw/' + key,
+        tipLines: [
+          gpu.vram_gb + ' GB VRAM \u00b7 ' + Math.round(gpu.mem_bw_gb_s) + ' GB/s',
+          gpu.tdp_w + 'W TDP',
+          gpu.street_usd ? '~$' + gpu.street_usd.toLocaleString() + ' street' : null,
+          Math.round(bestDecode) + ' tok/s estimated decode',
+        ].filter(Boolean)
+      });
     }
   }
 
@@ -352,7 +411,8 @@ function renderCostComparison(model, params) {
       const val = mode === 'cheapest'
         ? (e.price != null ? '$' + (e.price < 1 ? e.price.toFixed(3) : e.price.toFixed(2)) : '')
         : (e.tok != null ? Math.round(e.tok) + ' tok/s' : '');
-      html += `<div class="cc-row"><span>${esc(e.name)}</span><span class="${cls}">${val}</span></div>`;
+      const ext = e.external ? ' target="_blank" rel="noopener"' : '';
+      html += `<a class="cc-row" href="${esc(e.href || '#')}"${ext}><span>${tip(esc(e.name), e.tipLines)}</span><span class="${cls}">${val}</span></a>`;
     }
     if (!sorted.length) html += '<div class="cc-row"><span>No data</span><span></span></div>';
     html += '</div>';
@@ -405,14 +465,14 @@ function renderProviderChips(model) {
   let chips = '';
   for (const p of liveProviders.slice(0, 6)) {
     const throughput = p.throughput ? `${Math.round(p.throughput)} tok/s` : '';
-    chips += `<a class="prov-chip" href="#/provider/${esc(p.name)}">
+    chips += `<a class="prov-chip" href="#/provider/${esc(p.name)}" data-tip="${esc(provTitle(p))}">
       <div class="pn">${esc(p.name)}</div>
       ${throughput ? `<div class="pm">${throughput}</div>` : ''}
     </a>`;
   }
 
   return `<div class="sec">
-    <div class="sec-head"><span class="sec-q">What does a provider serve?</span><div class="sec-line"></div><a class="sec-more" href="#/provider/${esc(liveProviders[0].name)}">Browse all</a></div>
+    <div class="sec-head"><span class="sec-q">What does a provider serve?</span><div class="sec-line"></div><a class="sec-more" href="#/provider/${esc(liveProviders[0].name)}">Pick a provider</a></div>
     <div class="prov-strip">${chips}</div>
   </div>`;
 }
@@ -442,6 +502,15 @@ function wireSnippets(container) {
       });
     });
   }
+}
+
+function provTitle(p) {
+  return [
+    p.inputPrice != null ? '$' + p.inputPrice.toFixed(2) + '/1M in' : '',
+    p.outputPrice != null ? '$' + p.outputPrice.toFixed(2) + '/1M out' : '',
+    p.throughput != null ? Math.round(p.throughput) + ' tok/s' : '',
+    p.latency != null ? Math.round(p.latency * 1000) + 'ms TTFT' : '',
+  ].filter(Boolean).join(' \u00b7 ');
 }
 
 function esc(s) {

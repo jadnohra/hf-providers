@@ -12,7 +12,7 @@
 4. **What can my GPU run?** — test any GPU against reference models, see what fits and how fast
 5. **What's the cheapest way to run it?** — API vs cloud rental vs local hardware, normalized to $/1M tokens
 
-Data: provider info comes live from the Hugging Face API. GPU specs (220+) and cloud pricing (50+ offerings) are bundled and can be updated with `hf-providers sync`.
+Data: provider info comes live from the Hugging Face API. GPU specs (220+) and cloud pricing (88 offerings from 16 providers) are bundled and can be updated with `hf-providers sync`.
 
 <p align="center"><img src="assets/demo.gif" width="50%"></p>
 
@@ -124,7 +124,7 @@ hf-providers need gemma-3-4b
 Three sections:
 
 - **API providers**: live status, input/output pricing per 1M tokens, sorted by output cost
-- **Cloud GPU rental**: 50+ offerings across 5 providers, showing $/hr, best quant, estimated tok/s, and effective $/1M output tokens at full utilization
+- **Cloud GPU rental**: 88 offerings from 16 providers, showing $/hr, best quant, estimated tok/s, and effective $/1M output tokens at full utilization
 - **Local GPU**: street price, best quant, estimated tok/s, electricity-only $/1M output tokens ($0.12/kWh, 80% TDP), and a payback estimate showing how many tokens until the hardware pays for itself vs the cheapest API option
 
 Cloud and local costs assume continuous generation at full speed, so they represent the floor. Real costs will be higher if the GPU sits idle.
@@ -149,7 +149,22 @@ A token is optional but recommended. Authenticated requests get higher rate limi
 
 Data comes live from the Hugging Face Inference API. Currently tracked:
 
-Cerebras, Cohere, fal, Featherless, Fireworks, Groq, Hyperbolic, Nebius, Novita, Nscale, OVHcloud, Replicate, SambaNova, Scaleway, Together AI, HF Inference
+Cerebras, Cohere, fal, Featherless, Fireworks, Groq, Hyperbolic, Nebius, Novita, Nscale, OVHcloud, Public AI, Replicate, SambaNova, Scaleway, Together AI, WaveSpeed, Z.ai, HF Inference
+
+## Web UI
+
+[vram.run](https://vram.run) runs the same estimation engine as the CLI, compiled to a 125KB WebAssembly module via `wasm-bindgen`. Model data (828 models from 19 providers) is pre-cached at build time, so pages render instantly with no API calls for listings. Only individual model detail pages fetch live data for fresh provider enrichment.
+
+The core Rust crate (`hf-providers-core`) is feature-gated: the `network` feature gates `reqwest`/`tokio`/`dirs` for the CLI, while the Wasm build compiles with no default features and links only `serde`, `serde_json`, and `wasm-bindgen`. The web crate (`hf-providers-web`) exposes estimation, snippet generation, hardware lookup, and cost calculation as JS-callable functions.
+
+Pages:
+- **Model detail** -- providers table, cost comparison (API vs cloud rental vs buy & run), hardware estimation cards, code snippets, variant detection
+- **Hardware detail** -- spec header, check any model (quant x runtime matrix), compare two GPUs side by side with speed ratios, reference model table, cloud rental listings, electricity cost per model
+- **Provider detail** -- model catalog, compare two providers with shared/exclusive breakdown and speed ratios
+- **Browse** -- sortable and filterable tables for all models, hardware, providers, and cloud GPU offerings
+- **Stats** -- superlatives across models, providers, hardware, and cloud
+
+Static site in `web/`, built with `scripts/build-web.sh` (runs `wasm-pack`, converts TOML data to JSON, fetches model cache from HF API). Deployed to Cloudflare Pages.
 
 ## License
 
