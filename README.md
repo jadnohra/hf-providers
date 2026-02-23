@@ -1,12 +1,14 @@
 # hf-providers
 
-Search Hugging Face inference providers, estimate GPU performance, compare costs.
+**Many inference providers serve Hugging Face models. Which one should you use?**
 
-Three things this tool does:
+`hf-providers` answers five questions:
 
-- **Search** models and providers (with automatic variant detection), browse interactively, get ready-to-use API call code (Python, curl, JS)
-- **Estimate** what models fit on a GPU and how fast they'll run
-- **Compare** the cost of API providers vs cloud GPU rental vs local hardware
+1. **Where can I run this model?** — every provider that serves it, with live status, pricing, and throughput
+2. **Which is fastest / cheapest?** — get a ready-to-use API call routed through the best provider
+3. **What does a provider offer?** — browse any provider's full model catalog
+4. **What can my GPU run?** — test any GPU against reference models, see what fits and how fast
+5. **What's the cheapest way to run it?** — API vs cloud rental vs local hardware, normalized to $/1M tokens
 
 Data: provider info comes live from the Hugging Face API. GPU specs (220+) and cloud pricing (50+ offerings) are bundled and can be updated with `hf-providers sync`.
 
@@ -24,9 +26,9 @@ Or build from source:
 cargo install --git https://github.com/jadnohra/hf-providers
 ```
 
-## Search models and providers
+## Where can I run this model?
 
-Search by name to see the full picture for any model: who serves it, what it costs, how fast it is, and how it would run on local hardware.
+Search any model to see who serves it, what it costs, how fast it is, and how it would run on local hardware:
 
 ```
 hf-providers deepseek-r1
@@ -35,7 +37,7 @@ hf-providers meta-llama/Llama-3.3-70B-Instruct
 hf-providers                                      # trending models
 ```
 
-The detail view for a model shows:
+The detail view shows:
 
 - **Provider table** with live status (hot/warm/cold), input and output pricing per 1M tokens, throughput in tok/s, and whether each provider supports tool use and structured JSON output
 - **Cheapest and fastest** provider summary
@@ -49,41 +51,46 @@ Filter with `--cheapest`, `--fastest`, `--hot` (only live providers), `--tools` 
 
 ![search](assets/search.png)
 
-### Interactive browser
-
-The detail view opens an interactive tree browser where you can expand models into providers, expand providers into language options (Python, curl, JS), preview the API call code inline, and copy it to the clipboard.
+In the terminal, search results open an interactive tree browser. Expand models into providers, expand providers into language options (Python, curl, JS), preview the API call code inline, and copy it to the clipboard.
 
 **Keys:** arrow keys or `hjkl` to navigate, right to expand, `c` or Enter to copy, `q` or Esc to quit.
 
-### Direct snippets
+## Which is fastest / cheapest?
 
-Get API call code directly without opening the browser:
+Get API call code routed through the cheapest or fastest available provider:
 
 ```
+hf-providers snippet deepseek-r1 --cheapest       # cheapest provider
+hf-providers snippet deepseek-r1 --fastest        # fastest provider
 hf-providers deepseek-r1@novita                   # python via novita
 hf-providers deepseek-r1@novita:curl              # curl
 hf-providers deepseek-r1@novita:js                # javascript
-hf-providers snippet deepseek-r1 --cheapest       # cheapest provider
-hf-providers snippet deepseek-r1 --fastest        # fastest provider
 ```
 
-### Browse providers and live status
+Monitor live availability with auto-refresh:
+
+```
+hf-providers status deepseek-r1                   # live readiness + TTFT latency
+hf-providers status deepseek-r1 --watch 5         # auto-refresh every 5s
+```
+
+`status` shows live readiness (hot/warm/cold/unavailable) and time-to-first-token latency for each provider serving a model.
+
+## What does a provider offer?
+
+Browse any provider's full catalog, or list all providers:
 
 ```
 hf-providers providers                            # list all providers with type
 hf-providers providers groq                       # models available on groq
 hf-providers providers nebius --task image         # filter by task
-hf-providers status deepseek-r1                   # live readiness + TTFT latency
-hf-providers status deepseek-r1 --watch 5         # auto-refresh every 5s
 ```
 
-`providers` lists all inference providers and whether they run on serverless GPUs or HF CPU. Drill into a provider to see its models, filterable by task.
+Each provider shows whether it runs on serverless GPUs or HF CPU, and its models can be filtered by task type.
 
-`status` shows live readiness (hot/warm/cold/unavailable) and time-to-first-token latency for each provider serving a model. With `--watch`, it refreshes on a loop.
+## What can my GPU run?
 
-## GPU estimation
-
-`hf-providers machine` answers "what can this GPU run?" It tests 10 reference models (4B to 671B) against the GPU and groups them into three categories:
+`hf-providers machine` tests 10 reference models (4B to 671B) against a GPU and groups them into three categories:
 
 - **comfortable**: fits in VRAM and decodes at 30+ tok/s
 - **tight**: fits but decodes below 30 tok/s
@@ -96,15 +103,13 @@ hf-providers machine h100                         # H100
 hf-providers machine rtx4090 deepseek-r1          # specific model on a GPU
 ```
 
-The header shows GPU specs (VRAM, memory bandwidth, FP16 TFLOPS, TDP), street price, and estimated monthly electricity cost.
+The header shows GPU specs (VRAM, memory bandwidth, FP16 TFLOPS, TDP), street price, and estimated monthly electricity cost. Each model row shows the best quantization that fits, estimated decode tok/s, and prefill tok/s.
 
-Each model row shows the best quantization that fits, estimated decode tok/s, and prefill tok/s. Apple Silicon GPUs show estimates for both mlx and llama.cpp runtimes.
-
-With a specific model argument, it shows a detailed per-runtime breakdown with quant, weight size, fit status, decode, and prefill.
+Apple Silicon GPUs show estimates for both mlx and llama.cpp runtimes. With a specific model argument, it shows a detailed per-runtime breakdown with quant, weight size, fit status, decode, and prefill.
 
 GPU names are fuzzy-matched: `4090`, `rtx4090`, `rtx-4090`, and `rtx_4090` all find the same GPU. 220+ GPUs in the database covering NVIDIA, AMD, Intel, and Apple Silicon.
 
-## Cost comparison
+## What's the cheapest way to run it?
 
 `hf-providers need` compares three ways to run a model, all normalized to $/1M output tokens:
 
@@ -114,7 +119,7 @@ hf-providers need deepseek-r1
 hf-providers need gemma-3-4b
 ```
 
-It shows three sections:
+Three sections:
 
 - **API providers**: live status, input/output pricing per 1M tokens, sorted by output cost
 - **Cloud GPU rental**: 50+ offerings across 5 providers, showing $/hr, best quant, estimated tok/s, and effective $/1M output tokens at full utilization
@@ -137,6 +142,12 @@ Updated files are cached in `~/.cache/hf-providers/`. All commands check the cac
 Set `HF_TOKEN` or `HUGGING_FACE_HUB_TOKEN`, or log in with `huggingface-cli login`. The token is read automatically from `~/.cache/huggingface/token`.
 
 A token is optional but recommended. Authenticated requests get higher rate limits and access to gated models.
+
+## Providers
+
+Data comes live from the Hugging Face Inference API. Currently tracked:
+
+Cerebras, Cohere, fal, Featherless, Fireworks, Groq, Hyperbolic, Nebius, Novita, Nscale, OVHcloud, Replicate, SambaNova, Scaleway, Together AI, HF Inference
 
 ## License
 
