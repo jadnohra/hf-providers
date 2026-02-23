@@ -33,6 +33,14 @@ jobs:
       - name: Build web
         run: bash scripts/build-web.sh
 
+      - name: Create Pages project (if needed)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create vram-run --production-branch main
+        continue-on-error: true
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
