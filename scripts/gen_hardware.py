@@ -184,114 +184,96 @@ def emit_gpu(key: str, d: dict, llamacpp_de: float, llamacpp_pe: float,
     return "\n".join(lines)
 
 
-# ── Apple Silicon (manual, not in TechPowerUp) ────────────────────────
+# ── Apple Silicon (compact data, generates all entries) ───────────────
+# Not in TechPowerUp/dbgpu, maintained manually.
+# See scripts/APPLE_SILICON.md for update instructions.
 
-APPLE_ENTRIES = [
-    {
-        "key": "m4_max_128",
-        "name": "M4 Max 128GB",
-        "vendor": "apple",
-        "arch": "m4",
-        "vram_gb": 128,
-        "mem_bw_gb_s": 546,
-        "fp16_tflops": 53.5,
-        "tdp_w": 75,
-        "street_usd": 4999,
-        "mlx_decode_eff": 0.60, "mlx_prefill_eff": 0.28,
-        "llamacpp_decode_eff": 0.45, "llamacpp_prefill_eff": 0.20,
+# Per-generation efficiency factors.
+# llamacpp/mlx: (decode_eff, prefill_eff)
+# decode_eff: fraction of peak memory bandwidth utilized during decode
+# prefill_eff: fraction of peak FP16 TFLOPS utilized during prefill
+# Sources: r/LocalLLaMA, artificialanalysis.ai, llama.cpp CI, mlx benchmarks
+APPLE_GENERATIONS = {
+    "m1": {"llamacpp": (0.40, 0.12), "mlx": (0.52, 0.18)},
+    "m2": {"llamacpp": (0.42, 0.13), "mlx": (0.55, 0.20)},
+    "m3": {"llamacpp": (0.43, 0.14), "mlx": (0.57, 0.22)},
+    "m4": {"llamacpp": (0.44, 0.15), "mlx": (0.58, 0.25)},
+}
+
+# Per-variant: (fp16_tflops, mem_bw_gb_s, tdp_w, [(mem_gb, street_usd), ...])
+#   3-tuple in mem list = (mem_gb, street_usd, bw_override) for half-controller configs
+# fp16_tflops: theoretical peak FP16 from waredb.com (gpu_cores * 128 ALUs * 2 ops * clock * 2)
+# mem_bw_gb_s: from Apple specs (max controller config)
+# tdp_w: estimates from notebookcheck, AnandTech
+# street_usd: approximate current used/refurbished prices
+# Sources: waredb.com, Wikipedia Apple M1/M2/M3/M4, Apple Store, everymac.com
+APPLE_SILICON = {
+    "m1": {
+        "base":  (5.2,   68, 15, [(8, 499), (16, 599)]),
+        "pro":   (10.6, 200, 30, [(16, 799), (32, 999)]),
+        "max":   (21.2, 400, 60, [(32, 1299, 200), (64, 1699)]),
+        "ultra": (42.5, 800, 120, [(64, 2999), (128, 3999)]),
     },
-    {
-        "key": "m4_max_64",
-        "name": "M4 Max 64GB",
-        "vendor": "apple",
-        "arch": "m4",
-        "vram_gb": 64,
-        "mem_bw_gb_s": 546,
-        "fp16_tflops": 53.5,
-        "tdp_w": 75,
-        "street_usd": 2999,
-        "mlx_decode_eff": 0.60, "mlx_prefill_eff": 0.28,
-        "llamacpp_decode_eff": 0.45, "llamacpp_prefill_eff": 0.20,
+    "m2": {
+        "base":  (7.2, 100, 15, [(8, 599), (16, 699), (24, 799)]),
+        "pro":   (13.6, 200, 30, [(16, 999), (32, 1199)]),
+        "max":   (27.2, 400, 60, [(32, 1499, 200), (64, 1899), (96, 2199)]),
+        "ultra": (54.4, 800, 120, [(64, 3999), (128, 5499), (192, 6999)]),
     },
-    {
-        "key": "m4_pro_48",
-        "name": "M4 Pro 48GB",
-        "vendor": "apple",
-        "arch": "m4",
-        "vram_gb": 48,
-        "mem_bw_gb_s": 273,
-        "fp16_tflops": 22.1,
-        "tdp_w": 45,
-        "street_usd": 1999,
-        "mlx_decode_eff": 0.58, "mlx_prefill_eff": 0.25,
-        "llamacpp_decode_eff": 0.44, "llamacpp_prefill_eff": 0.18,
+    "m3": {
+        "base":  (8.2, 100, 15, [(8, 799), (16, 899), (24, 999)]),
+        "pro":   (14.8, 150, 30, [(18, 1299), (36, 1599)]),
+        "max":   (32.8, 400, 75, [(36, 2499, 200), (48, 2999), (64, 3499), (128, 4499)]),
+        "ultra": (65.5, 800, 120, [(128, 5999), (192, 6999)]),
     },
-    {
-        "key": "m4_pro_24",
-        "name": "M4 Pro 24GB",
-        "vendor": "apple",
-        "arch": "m4",
-        "vram_gb": 24,
-        "mem_bw_gb_s": 273,
-        "fp16_tflops": 22.1,
-        "tdp_w": 45,
-        "street_usd": 1599,
-        "mlx_decode_eff": 0.58, "mlx_prefill_eff": 0.25,
-        "llamacpp_decode_eff": 0.44, "llamacpp_prefill_eff": 0.18,
+    "m4": {
+        "base":  (9.2, 120, 20, [(16, 999), (24, 1199), (32, 1399)]),
+        "pro":   (18.4, 273, 45, [(24, 1599), (48, 1999)]),
+        "max":   (36.9, 546, 75, [(36, 2499, 273), (48, 2999), (64, 2999), (128, 4999)]),
     },
-    {
-        "key": "m3_max_128",
-        "name": "M3 Max 128GB",
-        "vendor": "apple",
-        "arch": "m3",
-        "vram_gb": 128,
-        "mem_bw_gb_s": 400,
-        "fp16_tflops": 45.2,
-        "tdp_w": 75,
-        "street_usd": 4499,
-        "mlx_decode_eff": 0.57, "mlx_prefill_eff": 0.26,
-        "llamacpp_decode_eff": 0.43, "llamacpp_prefill_eff": 0.18,
-    },
-    {
-        "key": "m2_ultra_192",
-        "name": "M2 Ultra 192GB",
-        "vendor": "apple",
-        "arch": "m2",
-        "vram_gb": 192,
-        "mem_bw_gb_s": 800,
-        "fp16_tflops": 27.2,
-        "tdp_w": 120,
-        "street_usd": 6999,
-        "mlx_decode_eff": 0.55, "mlx_prefill_eff": 0.24,
-        "llamacpp_decode_eff": 0.42, "llamacpp_prefill_eff": 0.17,
-    },
-    {
-        "key": "m2_ultra_128",
-        "name": "M2 Ultra 128GB",
-        "vendor": "apple",
-        "arch": "m2",
-        "vram_gb": 128,
-        "mem_bw_gb_s": 800,
-        "fp16_tflops": 27.2,
-        "tdp_w": 120,
-        "street_usd": 5499,
-        "mlx_decode_eff": 0.55, "mlx_prefill_eff": 0.24,
-        "llamacpp_decode_eff": 0.42, "llamacpp_prefill_eff": 0.17,
-    },
-    {
-        "key": "m1_ultra_128",
-        "name": "M1 Ultra 128GB",
-        "vendor": "apple",
-        "arch": "m1",
-        "vram_gb": 128,
-        "mem_bw_gb_s": 800,
-        "fp16_tflops": 21.2,
-        "tdp_w": 120,
-        "street_usd": 3999,
-        "mlx_decode_eff": 0.52, "mlx_prefill_eff": 0.22,
-        "llamacpp_decode_eff": 0.40, "llamacpp_prefill_eff": 0.16,
-    },
-]
+}
+
+
+def generate_apple_entries():
+    """Generate Apple Silicon hardware entries from compact data."""
+    entries = []
+    for gen, variants in APPLE_SILICON.items():
+        gen_info = APPLE_GENERATIONS[gen]
+        lc_de, lc_pe = gen_info["llamacpp"]
+        mlx_de, mlx_pe = gen_info["mlx"]
+
+        for variant, (fp16, bw, tdp, mem_configs) in variants.items():
+            name_variant = "" if variant == "base" else f" {variant.capitalize()}"
+
+            for config in mem_configs:
+                if len(config) == 3:
+                    mem, price, bw_override = config
+                else:
+                    mem, price = config
+                    bw_override = bw
+
+                if variant == "base":
+                    key = f"{gen}_{mem}"
+                else:
+                    key = f"{gen}_{variant}_{mem}"
+                name = f"{gen.upper()}{name_variant} {mem}GB"
+
+                entries.append({
+                    "key": key,
+                    "name": name,
+                    "vendor": "apple",
+                    "arch": gen,
+                    "vram_gb": mem,
+                    "mem_bw_gb_s": bw_override,
+                    "fp16_tflops": round(fp16, 1),
+                    "tdp_w": tdp,
+                    "street_usd": price,
+                    "llamacpp_decode_eff": lc_de,
+                    "llamacpp_prefill_eff": lc_pe,
+                    "mlx_decode_eff": mlx_de,
+                    "mlx_prefill_eff": mlx_pe,
+                })
+    return entries
 
 
 def emit_apple(entry: dict) -> str:
@@ -395,7 +377,8 @@ def main():
     print(f"# GPU specs for local inference estimation.")
     print(f"# Auto-generated from {source_label} + manual Apple Silicon entries.")
     print(f"# Generated: {date.today().isoformat()}")
-    print(f"# Total: {len(gpus)} discrete GPUs + {len(APPLE_ENTRIES)} Apple Silicon")
+    apple_entries = generate_apple_entries()
+    print(f"# Total: {len(gpus)} discrete GPUs + {len(apple_entries)} Apple Silicon")
     print(f"#")
     print(f"# llamacpp_*_eff: llama.cpp / ollama efficiency factors")
     print(f"# mlx_*_eff: mlx efficiency factors (Apple Silicon only)")
@@ -432,9 +415,9 @@ def main():
             print()
 
     # Apple Silicon
-    print(f"# ── Apple Silicon ({len(APPLE_ENTRIES)} entries, manual) ──")
+    print(f"# ── Apple Silicon ({len(apple_entries)} entries, manual) ──")
     print()
-    for entry in APPLE_ENTRIES:
+    for entry in apple_entries:
         print(emit_apple(entry))
         print()
 

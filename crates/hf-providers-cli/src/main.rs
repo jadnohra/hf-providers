@@ -71,6 +71,7 @@ fn fmt_count(n: u64) -> String {
         hf-providers deepseek-r1 --cheapest\n  \
         hf-providers providers groq\n  \
         hf-providers snippet deepseek-r1\n  \
+        hf-providers machine                    (auto-detect GPU)\n  \
         hf-providers machine rtx4090            (what can this GPU run?)\n  \
         hf-providers need llama-3.3-70b         (API vs cloud vs local cost)\n  \
         hf-providers                             (trending models)"
@@ -125,8 +126,8 @@ enum Commands {
     },
     /// What can this GPU run?
     Machine {
-        /// GPU key, e.g. rtx4090, 4090, m4-max-128, h100
-        gpu: String,
+        /// GPU key, e.g. rtx4090, 4090, m4-max-128, h100 (auto-detected if omitted)
+        gpu: Option<String>,
         /// Optional model to evaluate, e.g. deepseek-r1 or meta-llama/Llama-3.3-70B-Instruct
         model: Option<String>,
     },
@@ -161,7 +162,7 @@ async fn main() -> anyhow::Result<()> {
             cmd_status(&client, &model, watch).await?;
         }
         Some(Commands::Machine { gpu, model }) => {
-            cmd_machine(&client, &gpu, model.as_deref()).await?;
+            cmd_machine(&client, gpu.as_deref(), model.as_deref()).await?;
         }
         Some(Commands::Need { model }) => {
             cmd_need(&client, &model).await?;
@@ -596,12 +597,125 @@ async fn cmd_status(
     Ok(())
 }
 
+// ── GPU auto-detection ───────────────────────────────────────────────
+
+fn detect_gpu() -> Option<String> {
+    // Try NVIDIA first (works cross-platform where NVIDIA is present).
+    if let Ok(output) = std::process::Command::new("nvidia-smi")
+        .args(["--query-gpu=name", "--format=csv,noheader,nounits"])
+        .output()
+    {
+        if output.status.success() {
+            let name = String::from_utf8_lossy(&output.stdout);
+            let name = name.lines().next().unwrap_or("").trim();
+            if !name.is_empty() {
+                return Some(name.to_string());
+            }
+        }
+    }
+
+    // macOS: Apple Silicon via system_profiler.
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(output) = std::process::Command::new("system_profiler")
+            .arg("SPHardwareDataType")
+            .output()
+        {
+            if output.status.success() {
+                let text = String::from_utf8_lossy(&output.stdout);
+                let mut chip = None;
+                let mut memory = None;
+                for line in text.lines() {
+                    let line = line.trim();
+                    if line.starts_with("Chip:") {
+                        chip = Some(
+                            line.trim_start_matches("Chip:")
+                                .trim()
+                                .trim_start_matches("Apple ")
+                                .to_string(),
+                        );
+                    } else if line.starts_with("Memory:") {
+                        memory = line
+                            .trim_start_matches("Memory:")
+                            .split_whitespace()
+                            .next()
+                            .map(|s| s.to_string());
+                    }
+                }
+                if let (Some(chip), Some(mem)) = (chip, memory) {
+                    // "M4 Pro" + "48" -> "m4_pro_48"
+                    let key = format!(
+                        "{}_{}",
+                        chip.to_lowercase().replace(' ', "_"),
+                        mem
+                    );
+                    return Some(key);
+                }
+            }
+        }
+    }
+
+    None
+}
+
 // ── Machine ──────────────────────────────────────────────────────────
 
-async fn cmd_machine(client: &HfClient, input: &str, model_query: Option<&str>) -> anyhow::Result<()> {
+async fn cmd_machine(client: &HfClient, input: Option<&str>, model_query: Option<&str>) -> anyhow::Result<()> {
     let gpus = hardware::load_hardware_cached()?;
-    let (key, gpu) = hardware::find_gpu(&gpus, input)
-        .ok_or_else(|| anyhow::anyhow!("no GPU matching '{input}' in hardware database"))?;
+
+    let gpu_input = match input {
+        Some(g) => g.to_string(),
+        None => {
+            let detected = detect_gpu().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "could not auto-detect GPU\n  \
+                     try: hf-providers machine rtx4090"
+                )
+            })?;
+            eprintln!(
+                "  {}",
+                s_dim().apply_to(format!("detected: {}", detected))
+            );
+            detected
+        }
+    };
+
+    let (key, gpu) = hardware::find_gpu(&gpus, &gpu_input).ok_or_else(|| {
+        // Build a helpful suggestion when detected GPU isn't in the database.
+        let apple_keys: Vec<&str> = gpus
+            .iter()
+            .filter(|(_, g)| g.vendor == "apple")
+            .map(|(k, _)| k.as_str())
+            .collect();
+        let nvidia_keys: Vec<&str> = gpus
+            .iter()
+            .filter(|(_, g)| g.vendor == "nvidia")
+            .map(|(k, _)| k.as_str())
+            .collect();
+
+        let hint = if gpu_input.starts_with("m") && !apple_keys.is_empty() {
+            format!(
+                "\n  {} Apple Silicon configs available, e.g.: {}",
+                apple_keys.len(),
+                apple_keys.iter().take(3).copied().collect::<Vec<_>>().join(", ")
+            )
+        } else if !nvidia_keys.is_empty() {
+            format!(
+                "\n  {} NVIDIA configs available, e.g.: {}",
+                nvidia_keys.len(),
+                nvidia_keys.iter().take(3).copied().collect::<Vec<_>>().join(", ")
+            )
+        } else {
+            String::new()
+        };
+
+        anyhow::anyhow!(
+            "no GPU matching '{}' in hardware database{}\n  \
+             try: hf-providers machine rtx4090",
+            gpu_input,
+            hint
+        )
+    })?;
 
     // GPU header.
     let vendor_prefix = match gpu.vendor.as_str() {
@@ -675,7 +789,7 @@ async fn cmd_machine(client: &HfClient, input: &str, model_query: Option<&str>) 
                     .map(|rm| rm.params)
             })
             .ok_or_else(|| anyhow::anyhow!("cannot determine param count for {}\n  \
-                try: hf-providers machine {} org/Model-70B-Instruct", model.id, input))?;
+                try: hf-providers machine {} org/Model-70B-Instruct", model.id, key))?;
         let short = model.id.rsplit('/').next().unwrap_or(&model.id);
         vec![ModelEntry { short: short.to_string(), params }]
     } else {
