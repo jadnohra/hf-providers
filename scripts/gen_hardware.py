@@ -9,6 +9,8 @@ Usage (fetch latest from PyPI, no extra deps):
 """
 
 import argparse
+import os
+import subprocess
 import sys
 from datetime import date
 
@@ -422,5 +424,14 @@ def main():
         print()
 
 
+def regen_json():
+    """Re-run toml2json.py so web/data/hardware.json stays in sync."""
+    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "toml2json.py")
+    if os.path.exists(script):
+        print("# Re-generating web JSON ...", file=sys.stderr)
+        subprocess.run([sys.executable, script], check=True)
+
+
 if __name__ == "__main__":
     main()
+    regen_json()
