@@ -21,6 +21,12 @@ wasm-pack build crates/hf-providers-web \
 # wasm-pack generates a .gitignore in the output dir; remove it
 rm -f web/pkg/.gitignore
 
+echo "==> Stamping version"
+VER=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+sed -i.bak "s|<span id=\"ver\">v[^<]*</span>|<span id=\"ver\">v${VER}</span>|" web/index.html
+rm -f web/index.html.bak
+echo "    version: v${VER}"
+
 echo "==> Build complete"
 ls -lh web/pkg/hf_providers_bg.wasm
 echo "Files in web/pkg/:"
