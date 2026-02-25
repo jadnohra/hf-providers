@@ -15,7 +15,9 @@ export function navigate(path) {
 }
 
 function dispatch() {
-  const path = window.location.pathname || '/';
+  // Strip trailing slash (except root) so route patterns match consistently
+  const raw = window.location.pathname || '/';
+  const path = raw.length > 1 && raw.endsWith('/') ? raw.slice(0, -1) : raw;
 
   if (currentCleanup) {
     currentCleanup();

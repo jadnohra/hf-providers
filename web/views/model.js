@@ -10,12 +10,36 @@ import { state } from '../app.js';
 
 export function render(container, match, opts = {}) {
   const modelId = match[1];
-  container.innerHTML = `<div class="loading">Loading ${esc(modelId)}...</div>`;
   let cancelled = false;
 
-  // Call both endpoints in parallel:
-  // - modelInfo: full model data (safetensors, tags, library, etc.)
-  // - searchModels: enriched provider data (pricing, throughput, latency, features)
+  // Try cached data first, then enrich from live API
+  const cached = state.models && state.models.find(m => m.id === modelId);
+  if (cached) {
+    const model = parseModel(cached);
+    if (model) {
+      renderModel(container, model, opts);
+      // Try to enrich with live API data (non-blocking)
+      Promise.all([
+        api.modelInfo(modelId),
+        api.searchModels(modelId, 5),
+      ]).then(([infoRaw, searchResults]) => {
+        if (cancelled) return;
+        const fresh = parseModel(infoRaw);
+        if (!fresh) return;
+        const searchMatch = searchResults.find(r => r.id === modelId);
+        if (searchMatch) {
+          const enriched = parseModel(searchMatch);
+          if (enriched && enriched.providers.length) fresh.providers = enriched.providers;
+        }
+        renderModel(container, fresh, opts);
+      }).catch(() => {}); // cached version already shown, ignore API errors
+      return () => { cancelled = true; };
+    }
+  }
+
+  // No cache: must use live API
+  container.innerHTML = `<div class="loading">Loading ${esc(modelId)}...</div>`;
+
   Promise.all([
     api.modelInfo(modelId),
     api.searchModels(modelId, 5),
@@ -27,7 +51,6 @@ export function render(container, match, opts = {}) {
       return;
     }
 
-    // Enrich providers from search results (which have full pricing/perf data)
     const searchMatch = searchResults.find(r => r.id === modelId);
     if (searchMatch) {
       const enriched = parseModel(searchMatch);

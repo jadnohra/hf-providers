@@ -29,7 +29,12 @@ async function boot() {
   }
 
   const content = document.getElementById('content');
-  content.innerHTML = '<div class="loading">Loading...</div>';
+  const hasPreRendered = content.children.length > 0;
+
+  // Don't wipe pre-rendered content; only show loading on blank pages
+  if (!hasPreRendered) {
+    content.innerHTML = '<div class="loading">Loading...</div>';
+  }
 
   try {
     const [, hwResp, clResp] = await Promise.all([
@@ -66,7 +71,10 @@ async function boot() {
     }
 
   } catch (err) {
-    content.innerHTML = `<div class="loading">Failed to load: ${err.message}</div>`;
+    // If pre-rendered content exists, keep it visible instead of showing error
+    if (!hasPreRendered) {
+      content.innerHTML = `<div class="loading">Failed to load: ${err.message}</div>`;
+    }
     return;
   }
 
