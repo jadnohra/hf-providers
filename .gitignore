@@ -8,3 +8,14 @@
 claude.sh
 .claude/
 web/pkg/
+web/model/
+web/hw/
+web/provider/
+web/models/
+web/hardware/
+web/providers/
+web/cloud/
+web/stats/
+web/sitemap.xml
+web/robots.txt
+web/404.html

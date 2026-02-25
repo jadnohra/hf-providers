@@ -5,6 +5,7 @@
 import * as api from '../lib/hf-api.js';
 import { parseModel, readiness } from '../lib/parse.js';
 import { wireSort } from '../lib/sort.js';
+import { navigate } from '../lib/router.js';
 import { state } from '../app.js';
 
 const PROVIDERS = [
@@ -145,7 +146,7 @@ function wireProviderSwitch(container, currentId) {
       el.addEventListener('click', ev => {
         ev.stopPropagation();
         dd.classList.remove('open');
-        window.location.hash = '#/provider/' + el.dataset.id;
+        navigate('/provider/' + el.dataset.id);
       });
     });
   });
@@ -174,7 +175,7 @@ function renderSingleTable(container, displayName, rows) {
     const shortName = model.id.split('/').pop();
     html += `<tr>
       <td><span class="dt ${dotClass}"></span><span class="sl ${slClass}">${r}</span></td>
-      <td class="name"><a class="link" href="#/model/${esc(model.id)}" data-tip="${esc(model.id + (model.safetensorsParams ? ' \u00b7 ' + fmtP(model.safetensorsParams) : ''))}">${esc(shortName)}</a></td>
+      <td class="name"><a class="link" href="/model/${esc(model.id)}" data-tip="${esc(model.id + (model.safetensorsParams ? ' \u00b7 ' + fmtP(model.safetensorsParams) : ''))}">${esc(shortName)}</a></td>
       <td>${esc(prov.task || model.pipelineTag || '')}</td>
       <td>${prov.inputPrice != null ? '$' + prov.inputPrice.toFixed(2) : ''}</td>
       <td>${prov.outputPrice != null ? '$' + prov.outputPrice.toFixed(2) : ''}</td>
@@ -321,7 +322,7 @@ function compareRow(model, a, b) {
   }
 
   return `<tr>
-    <td class="name"><a class="link" href="#/model/${esc(model.id)}" data-tip="${esc(model.id + (model.safetensorsParams ? ' \u00b7 ' + fmtP(model.safetensorsParams) : ''))}">${esc(shortName)}</a></td>
+    <td class="name"><a class="link" href="/model/${esc(model.id)}" data-tip="${esc(model.id + (model.safetensorsParams ? ' \u00b7 ' + fmtP(model.safetensorsParams) : ''))}">${esc(shortName)}</a></td>
     <td class="${aPriceCls}" style="border-left:2px solid var(--bd);${aStyle}">${aPrice != null ? '$' + aPrice.toFixed(2) : (a ? '' : '\u2014')}</td>
     <td class="${aTokCls}" style="${aStyle}">${aTok != null ? Math.round(aTok) : (a ? '' : '\u2014')}</td>
     <td class="${bPriceCls}" style="border-left:2px solid var(--bd);${bStyle}">${bPrice != null ? '$' + bPrice.toFixed(2) : (b ? '' : '\u2014')}</td>

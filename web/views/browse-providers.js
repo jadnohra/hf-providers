@@ -42,7 +42,7 @@ export function render(container) {
 
   for (const p of PROVIDERS) {
     html += `<tr>
-      <td class="name"><a class="link" href="#/provider/${esc(p.id)}" data-tip="${esc(p.id + ' \u00b7 ' + p.focus + ' \u00b7 Tasks: ' + p.tasks)}">${esc(p.name)}</a></td>
+      <td class="name"><a class="link" href="/provider/${esc(p.id)}" data-tip="${esc(p.id + ' \u00b7 ' + p.focus + ' \u00b7 Tasks: ' + p.tasks)}">${esc(p.name)}</a></td>
       <td>${esc(p.focus)}</td>
       <td>${esc(p.tasks)}</td>
       <td class="prov-count" data-id="${esc(p.id)}"><span style="color:var(--dm)">...</span></td>

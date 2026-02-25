@@ -38,7 +38,7 @@ export function render(container) {
     html += `<tr>
       <td class="name">${o.url ? `<a class="link" href="${esc(o.url)}" target="_blank" rel="noopener" data-tip="${esc(o.name + (o.interconnect ? ' \u00b7 ' + o.interconnect : ''))}">${esc(o.name)}</a>` : esc(o.name)}</td>
       <td>${esc(o.provider)}</td>
-      <td><a class="link" href="#/hw/${esc(o.gpu)}" data-tip="${esc(gpuTitle)}">${esc(gpuName)}</a></td>
+      <td><a class="link" href="/hw/${esc(o.gpu)}" data-tip="${esc(gpuTitle)}">${esc(gpuName)}</a></td>
       <td>${o.gpu_count > 1 ? o.gpu_count + 'x' : '1'}</td>
       <td>${totalVram ? totalVram + ' GB' : ''}</td>
       <td data-sort="${totalPrice}">$${totalPrice.toFixed(2)}</td>

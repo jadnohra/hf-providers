@@ -42,8 +42,8 @@ export function render(container) {
       const mul = slowest.tok > 0 ? Math.round(fastest.tok / slowest.tok) : 0;
       pairs.push({
         category: 'Inference Speed', color: '#10b981',
-        best: { label: 'Fastest', value: fmtNum(Math.round(fastest.tok)), unit: 'tok/s', model: shortId(fastest.model), detail: fastest.provider, href: '#/model/' + fastest.model },
-        worst: { label: 'Slowest', value: fmtNum(Math.round(slowest.tok)), unit: 'tok/s', model: shortId(slowest.model), detail: slowest.provider, href: '#/model/' + slowest.model },
+        best: { label: 'Fastest', value: fmtNum(Math.round(fastest.tok)), unit: 'tok/s', model: shortId(fastest.model), detail: fastest.provider, href: '/model/' + fastest.model },
+        worst: { label: 'Slowest', value: fmtNum(Math.round(slowest.tok)), unit: 'tok/s', model: shortId(slowest.model), detail: slowest.provider, href: '/model/' + slowest.model },
         multiplier: mul + '\u00d7',
       });
     }
@@ -66,8 +66,8 @@ export function render(container) {
       const mul = cheapest.price > 0 ? Math.round(priciest.price / cheapest.price) : 0;
       pairs.push({
         category: 'Inference Price', color: '#f59e0b',
-        best: { label: 'Cheapest', value: '$' + cheapest.price.toFixed(2), unit: '/1M out', model: shortId(cheapest.model), detail: cheapest.provider, href: '#/model/' + cheapest.model },
-        worst: { label: 'Priciest', value: '$' + priciest.price.toFixed(2), unit: '/1M out', model: shortId(priciest.model), detail: priciest.provider, href: '#/model/' + priciest.model },
+        best: { label: 'Cheapest', value: '$' + cheapest.price.toFixed(2), unit: '/1M out', model: shortId(cheapest.model), detail: cheapest.provider, href: '/model/' + cheapest.model },
+        worst: { label: 'Priciest', value: '$' + priciest.price.toFixed(2), unit: '/1M out', model: shortId(priciest.model), detail: priciest.provider, href: '/model/' + priciest.model },
         multiplier: mul + '\u00d7',
       });
     }
@@ -80,7 +80,7 @@ export function render(container) {
       const live = m.providers.filter(p => p.status === 'live').length;
       if (!best || live > best.count) best = { model: m.id, count: live };
     }
-    if (best) records.push(card('\ud83c\udfc6', 'Most providers', best.count + ' live', shortId(best.model), '#f0fdf4', '#/model/' + best.model));
+    if (best) records.push(card('\ud83c\udfc6', 'Most providers', best.count + ' live', shortId(best.model), '#f0fdf4', '/model/' + best.model));
   }
 
   // Largest served model
@@ -92,7 +92,7 @@ export function render(container) {
       if (live && (!best || m.safetensorsParams > best.params))
         best = { model: m.id, params: m.safetensorsParams };
     }
-    if (best) records.push(card('\ud83d\udc0b', 'Largest served', fmtP(best.params) + ' params', shortId(best.model), '#eff6ff', '#/model/' + best.model));
+    if (best) records.push(card('\ud83d\udc0b', 'Largest served', fmtP(best.params) + ' params', shortId(best.model), '#eff6ff', '/model/' + best.model));
   }
 
   // Most liked
@@ -102,7 +102,7 @@ export function render(container) {
       if (m.likes > 0 && (!best || m.likes > best.likes))
         best = { model: m.id, likes: m.likes };
     }
-    if (best) records.push(card('\u2764\ufe0f', 'Most liked', fmtNum(best.likes) + ' likes', shortId(best.model), '#fef2f2', '#/model/' + best.model));
+    if (best) records.push(card('\u2764\ufe0f', 'Most liked', fmtNum(best.likes) + ' likes', shortId(best.model), '#fef2f2', '/model/' + best.model));
   }
 
   // Most downloaded
@@ -112,7 +112,7 @@ export function render(container) {
       if (m.downloads > 0 && (!best || m.downloads > best.downloads))
         best = { model: m.id, downloads: m.downloads };
     }
-    if (best) records.push(card('\ud83d\udce6', 'Most downloaded', fmtNum(best.downloads), shortId(best.model), '#fefce8', '#/model/' + best.model));
+    if (best) records.push(card('\ud83d\udce6', 'Most downloaded', fmtNum(best.downloads), shortId(best.model), '#fefce8', '/model/' + best.model));
   }
 
   // Most variants
@@ -138,7 +138,7 @@ export function render(container) {
       }
       if (!best || count > best.count) best = { model: m.id, count };
     }
-    if (best && best.count > 0) records.push(card('\ud83c\udf3f', 'Most variants', best.count + ' related', shortId(best.model), '#f0fdf4', '#/model/' + best.model));
+    if (best && best.count > 0) records.push(card('\ud83c\udf3f', 'Most variants', best.count + ' related', shortId(best.model), '#f0fdf4', '/model/' + best.model));
   }
 
   // Provider superlatives
@@ -160,14 +160,14 @@ export function render(container) {
     for (const [name, s] of provStats) {
       if (!biggestProv || s.count > biggestProv.count) biggestProv = { name, count: s.count };
     }
-    if (biggestProv) records.push(card('\ud83d\udcda', 'Biggest catalog', biggestProv.count + ' models', biggestProv.name, '#eff6ff', '#/provider/' + biggestProv.name));
+    if (biggestProv) records.push(card('\ud83d\udcda', 'Biggest catalog', biggestProv.count + ' models', biggestProv.name, '#eff6ff', '/provider/' + biggestProv.name));
 
     // Speed king
     let fastestProv = null;
     for (const [name, s] of provStats) {
       if (s.maxTok > 0 && (!fastestProv || s.maxTok > fastestProv.tok)) fastestProv = { name, tok: s.maxTok };
     }
-    if (fastestProv) records.push(card('\u26a1', 'Speed king', fmtNum(Math.round(fastestProv.tok)) + ' tok/s', fastestProv.name, '#fefce8', '#/provider/' + fastestProv.name));
+    if (fastestProv) records.push(card('\u26a1', 'Speed king', fmtNum(Math.round(fastestProv.tok)) + ' tok/s', fastestProv.name, '#fefce8', '/provider/' + fastestProv.name));
 
     // Budget pick
     let cheapestProv = null;
@@ -177,7 +177,7 @@ export function render(container) {
         if (!cheapestProv || avg < cheapestProv.avg) cheapestProv = { name, avg };
       }
     }
-    if (cheapestProv) records.push(card('\ud83d\udcb0', 'Budget pick', '$' + cheapestProv.avg.toFixed(2) + '/1M avg', cheapestProv.name, '#f0fdf4', '#/provider/' + cheapestProv.name));
+    if (cheapestProv) records.push(card('\ud83d\udcb0', 'Budget pick', '$' + cheapestProv.avg.toFixed(2) + '/1M avg', cheapestProv.name, '#f0fdf4', '/provider/' + cheapestProv.name));
   }
 
   // Least liked (with providers)
@@ -188,7 +188,7 @@ export function render(container) {
       if (!live) continue;
       if (!worst || m.likes < worst.likes) worst = { model: m.id, likes: m.likes };
     }
-    if (worst) records.push(card('\ud83d\udc94', 'Least liked', fmtNum(worst.likes) + ' likes', shortId(worst.model), '#fef2f2', '#/model/' + worst.model));
+    if (worst) records.push(card('\ud83d\udc94', 'Least liked', fmtNum(worst.likes) + ' likes', shortId(worst.model), '#fef2f2', '/model/' + worst.model));
   }
 
   // Most versatile
@@ -202,7 +202,7 @@ export function render(container) {
       if (tasks.size > 0 && (!best || tasks.size > best.count))
         best = { model: m.id, count: tasks.size, tasks: [...tasks].join(', ') };
     }
-    if (best && best.count > 1) records.push(card('\ud83d\udd27', 'Most versatile', best.count + ' tasks', shortId(best.model), '#eff6ff', '#/model/' + best.model));
+    if (best && best.count > 1) records.push(card('\ud83d\udd27', 'Most versatile', best.count + ' tasks', shortId(best.model), '#eff6ff', '/model/' + best.model));
   }
 
   // Smallest served
@@ -214,7 +214,7 @@ export function render(container) {
       if (live && (!smallest || m.safetensorsParams < smallest.params))
         smallest = { model: m.id, params: m.safetensorsParams };
     }
-    if (smallest) records.push(card('\ud83d\udc1c', 'Smallest served', fmtP(smallest.params) + ' params', shortId(smallest.model), '#fefce8', '#/model/' + smallest.model));
+    if (smallest) records.push(card('\ud83d\udc1c', 'Smallest served', fmtP(smallest.params) + ' params', shortId(smallest.model), '#fefce8', '/model/' + smallest.model));
   }
 
   // ── Hardware superlatives ──
@@ -226,8 +226,8 @@ export function render(container) {
       if (!most || gpu.vram_gb > most.vram) most = { key, name: gpu.name, vram: gpu.vram_gb };
       if (!least || gpu.vram_gb < least.vram) least = { key, name: gpu.name, vram: gpu.vram_gb };
     }
-    if (most) hwCards.push(card('\ud83e\udde0', 'Most VRAM', most.vram + ' GB', most.name, '#f5f3ff', '#/hw/' + most.key));
-    if (least) hwCards.push(card('\ud83d\udc1c', 'Least VRAM', least.vram + ' GB', least.name, '#fff7ed', '#/hw/' + least.key));
+    if (most) hwCards.push(card('\ud83e\udde0', 'Most VRAM', most.vram + ' GB', most.name, '#f5f3ff', '/hw/' + most.key));
+    if (least) hwCards.push(card('\ud83d\udc1c', 'Least VRAM', least.vram + ' GB', least.name, '#fff7ed', '/hw/' + least.key));
   }
 
   // Most bandwidth
@@ -236,7 +236,7 @@ export function render(container) {
     for (const [key, gpu] of gpus) {
       if (!best || gpu.mem_bw_gb_s > best.bw) best = { key, name: gpu.name, bw: gpu.mem_bw_gb_s };
     }
-    if (best) hwCards.push(card('\ud83d\ude80', 'Most bandwidth', fmtNum(Math.round(best.bw)) + ' GB/s', best.name, '#eff6ff', '#/hw/' + best.key));
+    if (best) hwCards.push(card('\ud83d\ude80', 'Most bandwidth', fmtNum(Math.round(best.bw)) + ' GB/s', best.name, '#eff6ff', '/hw/' + best.key));
   }
 
   // Best / worst $/GB VRAM
@@ -248,8 +248,8 @@ export function render(container) {
       if (!best || ratio < best.ratio) best = { key, name: gpu.name, ratio, price: gpu.street_usd, vram: gpu.vram_gb };
       if (!worst || ratio > worst.ratio) worst = { key, name: gpu.name, ratio, price: gpu.street_usd, vram: gpu.vram_gb };
     }
-    if (best) hwCards.push(card('\ud83d\udcb5', 'Best $/GB VRAM', '$' + Math.round(best.ratio) + '/GB', best.name, '#f0fdf4', '#/hw/' + best.key));
-    if (worst) hwCards.push(card('\ud83d\udcb8', 'Worst $/GB VRAM', '$' + Math.round(worst.ratio) + '/GB', worst.name, '#fef2f2', '#/hw/' + worst.key));
+    if (best) hwCards.push(card('\ud83d\udcb5', 'Best $/GB VRAM', '$' + Math.round(best.ratio) + '/GB', best.name, '#f0fdf4', '/hw/' + best.key));
+    if (worst) hwCards.push(card('\ud83d\udcb8', 'Worst $/GB VRAM', '$' + Math.round(worst.ratio) + '/GB', worst.name, '#fef2f2', '/hw/' + worst.key));
   }
 
   // Fits on a laptop?
@@ -268,7 +268,7 @@ export function render(container) {
             largest = { model: m.id, params: m.safetensorsParams, tok: result[1].decode_tok_s };
         }
       }
-      if (largest) hwCards.push(card('\ud83d\udcbb', 'Fits on a laptop?', fmtP(largest.params) + ' @ ' + Math.round(largest.tok) + ' tok/s', 'M4 Pro 24GB', '#fefce8', '#/hw/m4_pro_24'));
+      if (largest) hwCards.push(card('\ud83d\udcbb', 'Fits on a laptop?', fmtP(largest.params) + ' @ ' + Math.round(largest.tok) + ' tok/s', 'M4 Pro 24GB', '#fefce8', '/hw/m4_pro_24'));
     }
   }
 
@@ -283,8 +283,8 @@ export function render(container) {
       const mul = least.tdp > 0 ? Math.round(most.tdp / least.tdp) : 0;
       pairs.push({
         category: 'Power Draw', color: '#ef4444',
-        best: { label: 'Most efficient', value: least.tdp + 'W', unit: 'TDP', model: least.name, detail: '', href: '#/hw/' + least.key },
-        worst: { label: 'Power hungry', value: fmtNum(most.tdp) + 'W', unit: 'TDP', model: most.name, detail: '', href: '#/hw/' + most.key },
+        best: { label: 'Most efficient', value: least.tdp + 'W', unit: 'TDP', model: least.name, detail: '', href: '/hw/' + least.key },
+        worst: { label: 'Power hungry', value: fmtNum(most.tdp) + 'W', unit: 'TDP', model: most.name, detail: '', href: '/hw/' + most.key },
         multiplier: mul + '\u00d7',
       });
     }
@@ -305,8 +305,8 @@ export function render(container) {
       const mul = cheapest.price > 0 ? Math.round(priciest.price / cheapest.price) : 0;
       pairs.push({
         category: 'Cloud GPU', color: '#8b5cf6',
-        best: { label: 'Cheapest', value: '$' + cheapest.price.toFixed(2), unit: '/hr', model: cheapest.gpu, detail: cheapest.provider, href: '#/cloud' },
-        worst: { label: 'Priciest', value: '$' + priciest.price.toFixed(2), unit: '/hr', model: priciest.gpu, detail: priciest.provider, href: '#/cloud' },
+        best: { label: 'Cheapest', value: '$' + cheapest.price.toFixed(2), unit: '/hr', model: cheapest.gpu, detail: cheapest.provider, href: '/cloud' },
+        worst: { label: 'Priciest', value: '$' + priciest.price.toFixed(2), unit: '/hr', model: priciest.gpu, detail: priciest.provider, href: '/cloud' },
         multiplier: mul + '\u00d7',
       });
     }
@@ -377,7 +377,7 @@ export function render(container) {
             label: 'RTX 4090 break-even',
             value: fmtNum(Math.round(breakeven)) + ' tokens',
             detail: 'vs $' + cheapestApi.toFixed(2) + '/1M cheapest API (8B model)',
-            href: '#/hw/rtx_4090',
+            href: '/hw/rtx_4090',
           });
         }
       }
@@ -448,7 +448,7 @@ export function render(container) {
 
   // Hero card (best local value)
   if (heroCard) {
-    html += `<a class="st-hero" href="#/hw/${esc(heroCard.key)}">
+    html += `<a class="st-hero" href="/hw/${esc(heroCard.key)}">
       <div class="st-hero-gem">\ud83d\udc8e</div>
       <div class="st-hero-lbl">Best local value</div>
       <div class="st-hero-val">$${heroCard.cost.toFixed(4)} <span>/1M output tokens</span></div>

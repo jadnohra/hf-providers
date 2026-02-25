@@ -6,6 +6,7 @@ import * as api from '../lib/hf-api.js';
 import { parseModel } from '../lib/parse.js';
 import { wireSort } from '../lib/sort.js';
 import { tip, hwTipFromSpec } from '../lib/tips.js';
+import { navigate } from '../lib/router.js';
 import { state } from '../app.js';
 
 // Cache trending models for the empty-query dropdown
@@ -93,7 +94,7 @@ function wireSpecSwitch(container) {
       return;
     }
     populateHwDropdown(dd, '', item => {
-      window.location.hash = '#/hw/' + item.key;
+      navigate('/hw/' + item.key);
       dd.classList.remove('open');
     });
     dd.classList.add('open');
@@ -297,7 +298,7 @@ function wireModelCheck(container, gpu) {
 
     const shortName = model.id.split('/').pop();
     let html = `<div style="margin-bottom:6px">
-      <a class="link" href="#/model/${esc(model.id)}" style="font-weight:700">${esc(shortName)}</a>
+      <a class="link" href="/model/${esc(model.id)}" style="font-weight:700">${esc(shortName)}</a>
       <span style="color:var(--dm);margin-left:6px">${fmtP(params)} params</span>
     </div>`;
 
@@ -378,7 +379,7 @@ function wireModelCheck(container, gpu) {
 function renderHwCompare(currentKey) {
   return `<div class="sec">
     <div class="sec-head"><span class="sec-q">Compare with another HW</span><div class="sec-line"></div>
-      <a class="sec-more" href="#/hardware">Browse all</a></div>
+      <a class="sec-more" href="/hardware">Browse all</a></div>
     <div class="search-wrap" style="max-width:none;margin:0 0 8px">
       <input class="search" id="hw-compare-search" placeholder="Search hardware to compare..." autocomplete="off" style="padding:6px 12px;font-size:11px">
       <div class="dd" id="hw-compare-search-dd" style="max-height:280px;overflow-y:auto"></div>
@@ -518,7 +519,7 @@ function renderComparison(result, container, currentGpu, otherGpu) {
     }
 
     html += `<tr>
-      <td class="name"><a class="link" href="#/model/${esc(ref.id)}" data-tip="${esc(ref.id + ' \u00b7 ' + fmtP(ref.params) + ' params')}">${esc(ref.short)}</a></td>
+      <td class="name"><a class="link" href="/model/${esc(ref.id)}" data-tip="${esc(ref.id + ' \u00b7 ' + fmtP(ref.params) + ' params')}">${esc(ref.short)}</a></td>
       <td>${fmtP(ref.params)}</td>
       <td style="border-left:2px solid var(--bd);${noA}">${bestA ? bestA.quant : '\u2014'}</td>
       <td class="${decACls}" style="${noA}">${decA ? Math.round(decA) + ' tok/s' : '\u2014'}</td>
@@ -578,7 +579,7 @@ function renderModelTable(gpu) {
     for (const m of comfortable) {
       const rt = multiRuntime ? ` (${m.best.runtime})` : '';
       html += `<tr>
-        <td class="name"><a class="link" href="#/model/${esc(m.id)}" data-tip="${esc(m.id + ' \u00b7 ' + fmtP(m.params) + ' params')}">${esc(m.short)}</a></td>
+        <td class="name"><a class="link" href="/model/${esc(m.id)}" data-tip="${esc(m.id + ' \u00b7 ' + fmtP(m.params) + ' params')}">${esc(m.short)}</a></td>
         <td>${fmtP(m.params)}</td>
         <td>${m.best.quant || ''}</td>
         <td>${m.best.weight_gb.toFixed(0)} GB</td>
@@ -593,7 +594,7 @@ function renderModelTable(gpu) {
     for (const m of tight) {
       const rt = multiRuntime ? ` (${m.best.runtime})` : '';
       html += `<tr>
-        <td class="name"><a class="link" href="#/model/${esc(m.id)}" data-tip="${esc(m.id + ' \u00b7 ' + fmtP(m.params) + ' params')}">${esc(m.short)}</a></td>
+        <td class="name"><a class="link" href="/model/${esc(m.id)}" data-tip="${esc(m.id + ' \u00b7 ' + fmtP(m.params) + ' params')}">${esc(m.short)}</a></td>
         <td>${fmtP(m.params)}</td>
         <td>${m.best.quant || ''}</td>
         <td>${m.best.weight_gb.toFixed(0)} GB</td>

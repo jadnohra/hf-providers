@@ -5,6 +5,7 @@ import { parseModel, readiness } from '../lib/parse.js';
 import * as wasm from '../lib/wasm.js';
 import { wireSort } from '../lib/sort.js';
 import { tip, hwTip } from '../lib/tips.js';
+import { navigate } from '../lib/router.js';
 import { state } from '../app.js';
 
 export function render(container, match, opts = {}) {
@@ -82,7 +83,7 @@ function renderModel(container, model, opts = {}) {
   if (opts.embedded) {
     // Compact title for landing page
     html += `<div style="text-align:center;margin-bottom:8px">
-      <span style="font-size:11px;color:var(--mt)">${esc(org)}/</span><a href="#/model/${esc(model.id)}" style="font-size:14px;font-weight:700;color:var(--tx);text-decoration:none">${esc(name)}</a>
+      <span style="font-size:11px;color:var(--mt)">${esc(org)}/</span><a href="/model/${esc(model.id)}" style="font-size:14px;font-weight:700;color:var(--tx);text-decoration:none">${esc(name)}</a>
     </div>`;
   } else {
     // Full header (same style as HW/provider)
@@ -208,7 +209,7 @@ function renderVariants(model) {
     let hint = '';
     if (params) hint += fmtP(params);
     if (provCount) hint += (hint ? ' \u00b7 ' : '') + provCount + ' providers';
-    chips += `<a class="var-chip" href="#/model/${esc(v.id)}" data-tip="${esc(v.id)}">
+    chips += `<a class="var-chip" href="/model/${esc(v.id)}" data-tip="${esc(v.id)}">
       <div class="pn">${esc(vName)}</div>
       ${hint ? `<div class="pm">${esc(hint)}</div>` : ''}
     </a>`;
@@ -235,7 +236,7 @@ function providerRows(providers) {
       data-price="${p.outputPrice ?? 999999}"
       data-throughput="${p.throughput ?? 0}">
       <td><span class="dt ${dotClass}"></span><span class="sl ${slClass}">${r}</span>${ttft ? `<span class="ttft">${ttft}</span>` : ''}</td>
-      <td class="name"><a class="link" href="#/provider/${esc(p.name)}" data-tip="${esc(provTitle(p))}">${esc(p.name)}</a></td>
+      <td class="name"><a class="link" href="/provider/${esc(p.name)}" data-tip="${esc(provTitle(p))}">${esc(p.name)}</a></td>
       <td>${p.inputPrice != null ? '$' + p.inputPrice.toFixed(2) : ''}</td>
       <td>${p.outputPrice != null ? '$' + p.outputPrice.toFixed(2) : ''}</td>
       <td>${p.throughput != null ? Math.round(p.throughput) + ' tok/s' : ''}</td>
@@ -309,7 +310,7 @@ function renderHardwareCards(model, params) {
         fitClass = 'fit-n';
         fitText = "doesn't fit";
       }
-      cards += `<a class="hw-card${isYours ? ' yours' : ''}" href="#/hw/${key}">
+      cards += `<a class="hw-card${isYours ? ' yours' : ''}" href="/hw/${key}">
         <div class="hn">${tip(esc(gpu.name), tipLines)}${yoursLabel}</div>
         <div class="ht">${esc(vendor)} \u00b7 ${vramLabel}</div>
         <div class="hm">${quantLabel} \u00b7 ${weightStr}</div>
@@ -317,7 +318,7 @@ function renderHardwareCards(model, params) {
       </a>`;
     } else {
       const weightStr = (params * 0.5 / 1e9).toFixed(0) + ' GB';
-      cards += `<a class="hw-card${isYours ? ' yours' : ''}" href="#/hw/${key}">
+      cards += `<a class="hw-card${isYours ? ' yours' : ''}" href="/hw/${key}">
         <div class="hn">${tip(esc(gpu.name), tipLines)}${yoursLabel}</div>
         <div class="ht">${esc(vendor)} \u00b7 ${vramLabel}</div>
         <div class="hm">Q4 \u00b7 ${weightStr} needed</div>
@@ -327,7 +328,7 @@ function renderHardwareCards(model, params) {
   }
 
   return `<div class="sec" id="sec-hw">
-    <div class="sec-head"><span class="sec-q">What can my hardware run?</span><div class="sec-line"></div><a class="sec-more" href="#/hw/rtx_4090">Pick your hardware</a></div>
+    <div class="sec-head"><span class="sec-q">What can my hardware run?</span><div class="sec-line"></div><a class="sec-more" href="/hw/rtx_4090">Pick your hardware</a></div>
     <div class="hw-row">${cards}</div>
   </div>`;
 }
@@ -341,7 +342,7 @@ function renderCostComparison(model, params) {
     .filter(p => p.status === 'live')
     .map(p => ({
       name: p.name, price: p.outputPrice, tok: p.throughput,
-      href: '#/provider/' + p.name,
+      href: '/provider/' + p.name,
       tipLines: [
         p.inputPrice != null ? '$' + p.inputPrice.toFixed(2) + '/1M input' : null,
         p.outputPrice != null ? '$' + p.outputPrice.toFixed(2) + '/1M output' : null,
@@ -375,7 +376,7 @@ function renderCostComparison(model, params) {
       cloudData.push({
         name: gpuLabel + ' \u00b7 ' + offering.provider,
         price: costPerM, tok: bestDecode,
-        href: offering.url || '#/hw/' + offering.gpu,
+        href: offering.url || '/hw/' + offering.gpu,
         external: !!offering.url,
         tipLines: [
           offering.name,
@@ -406,7 +407,7 @@ function renderCostComparison(model, params) {
       const costPerM = wasm.costPerMillion((gpu.tdp_w / 1000) * elecRate, bestDecode);
       localData.push({
         name: gpu.name, price: costPerM, tok: bestDecode,
-        href: '#/hw/' + key,
+        href: '/hw/' + key,
         tipLines: [
           gpu.vram_gb + ' GB VRAM \u00b7 ' + Math.round(gpu.mem_bw_gb_s) + ' GB/s',
           gpu.tdp_w + 'W TDP',
@@ -483,14 +484,14 @@ function renderProviderChips(model) {
   let chips = '';
   for (const p of liveProviders.slice(0, 6)) {
     const throughput = p.throughput ? `${Math.round(p.throughput)} tok/s` : '';
-    chips += `<a class="prov-chip" href="#/provider/${esc(p.name)}" data-tip="${esc(provTitle(p))}">
+    chips += `<a class="prov-chip" href="/provider/${esc(p.name)}" data-tip="${esc(provTitle(p))}">
       <div class="pn">${esc(p.name)}</div>
       ${throughput ? `<div class="pm">${throughput}</div>` : ''}
     </a>`;
   }
 
   return `<div class="sec">
-    <div class="sec-head"><span class="sec-q">What does a provider serve?</span><div class="sec-line"></div><a class="sec-more" href="#/provider/${esc(liveProviders[0].name)}">Pick a provider</a></div>
+    <div class="sec-head"><span class="sec-q">What does a provider serve?</span><div class="sec-line"></div><a class="sec-more" href="/provider/${esc(liveProviders[0].name)}">Pick a provider</a></div>
     <div class="prov-strip">${chips}</div>
   </div>`;
 }
@@ -536,7 +537,7 @@ function wireModelSwitch(container) {
       el.addEventListener('click', e => {
         e.stopPropagation();
         dd.classList.remove('open');
-        window.location.hash = '#/model/' + el.dataset.id;
+        navigate('/model/' + el.dataset.id);
       });
     });
   }

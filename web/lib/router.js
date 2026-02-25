@@ -1,4 +1,4 @@
-// Hash-based router: #/model/org/Name, #/hw/gpu_key, #/provider/name
+// Path-based router using pushState: /model/org/Name, /hw/gpu_key, /provider/name
 
 let routes = [];
 let currentCleanup = null;
@@ -7,16 +7,15 @@ export function register(pattern, handler) {
   routes.push({ pattern, handler });
 }
 
-export function navigate(hash) {
-  if (window.location.hash !== hash) {
-    window.location.hash = hash;
-  } else {
-    dispatch();
+export function navigate(path) {
+  if (window.location.pathname !== path) {
+    history.pushState({}, '', path);
   }
+  dispatch();
 }
 
 function dispatch() {
-  const hash = window.location.hash.slice(1) || '/';
+  const path = window.location.pathname || '/';
 
   if (currentCleanup) {
     currentCleanup();
@@ -24,7 +23,7 @@ function dispatch() {
   }
 
   // Hero visible only on landing page; top-bar search on all detail pages
-  const isLanding = (hash === '/');
+  const isLanding = (path === '/');
   const hero = document.querySelector('.hero');
   if (hero) hero.style.display = isLanding ? '' : 'none';
   const topSearch = document.getElementById('top-search');
@@ -34,7 +33,7 @@ function dispatch() {
   container.innerHTML = '';
 
   for (const route of routes) {
-    const match = hash.match(route.pattern);
+    const match = path.match(route.pattern);
     if (match) {
       const cleanup = route.handler(container, match);
       if (typeof cleanup === 'function') {
@@ -58,6 +57,22 @@ function dispatch() {
 }
 
 export function start() {
-  window.addEventListener('hashchange', dispatch);
+  window.addEventListener('popstate', dispatch);
+
+  // Intercept local <a> clicks for SPA navigation
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a');
+    if (!a) return;
+    const href = a.getAttribute('href');
+    if (!href) return;
+    // Skip external links, mailto, new-tab links
+    if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('mailto:')) return;
+    if (a.target === '_blank') return;
+    // Skip non-path hrefs
+    if (!href.startsWith('/')) return;
+    e.preventDefault();
+    navigate(href);
+  });
+
   dispatch();
 }

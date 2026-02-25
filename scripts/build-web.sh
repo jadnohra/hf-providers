@@ -27,6 +27,9 @@ sed -i.bak "s|<span id=\"ver\">v[^<]*</span>|<span id=\"ver\">v${VER}</span>|" w
 rm -f web/index.html.bak
 echo "    version: v${VER}"
 
+echo "==> Pre-rendering SEO pages"
+python3 scripts/build-seo-pages.py
+
 echo "==> Build complete"
 ls -lh web/pkg/hf_providers_bg.wasm
 echo "Files in web/pkg/:"

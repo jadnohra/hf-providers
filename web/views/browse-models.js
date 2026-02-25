@@ -47,7 +47,7 @@ function renderTable(container, models) {
       ? m.inferenceProviderMapping.filter(p => p.status === 'live').length : 0;
 
     html += `<tr>
-      <td class="name"><a class="link" href="#/model/${esc(m.id)}" data-tip="${esc([params ? fmtP(params) + ' params' : '', m.pipeline_tag || '', provCount ? provCount + ' providers' : ''].filter(Boolean).join(' \u00b7 '))}">${org ? `<span style="color:var(--mt);font-weight:400">${esc(org)}/</span>` : ''}${esc(name)}</a></td>
+      <td class="name"><a class="link" href="/model/${esc(m.id)}" data-tip="${esc([params ? fmtP(params) + ' params' : '', m.pipeline_tag || '', provCount ? provCount + ' providers' : ''].filter(Boolean).join(' \u00b7 '))}">${org ? `<span style="color:var(--mt);font-weight:400">${esc(org)}/</span>` : ''}${esc(name)}</a></td>
       <td>${esc(m.pipeline_tag || '')}</td>
       <td>${params ? fmtP(params) : ''}</td>
       <td>${m.likes ? fmtNum(m.likes) : ''}</td>

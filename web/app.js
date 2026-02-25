@@ -23,14 +23,19 @@ export const state = {
 };
 
 async function boot() {
+  // Redirect old hash URLs to path URLs
+  if (location.hash && location.hash.startsWith('#/')) {
+    history.replaceState({}, '', location.hash.slice(1));
+  }
+
   const content = document.getElementById('content');
   content.innerHTML = '<div class="loading">Loading...</div>';
 
   try {
     const [, hwResp, clResp] = await Promise.all([
       wasm.load(),
-      fetch('data/hardware.json'),
-      fetch('data/cloud.json'),
+      fetch('/data/hardware.json'),
+      fetch('/data/cloud.json'),
     ]);
 
     state.hardware = await hwResp.json();
@@ -38,7 +43,7 @@ async function boot() {
 
     // Models cache is optional (needs fetch-models.py to be run)
     try {
-      const mdResp = await fetch('data/models.json');
+      const mdResp = await fetch('/data/models.json');
       if (mdResp.ok) state.models = await mdResp.json();
     } catch {}
 
@@ -51,12 +56,12 @@ async function boot() {
     if (sub) {
       const parts = [];
       if (state.myGpu && state.myGpu.key && !state.myGpu.needsPicker) {
-        parts.push(`<a href="#/hw/${state.myGpu.key}">${state.myGpu.gpu.name}</a>`);
+        parts.push(`<a href="/hw/${state.myGpu.key}">${state.myGpu.gpu.name}</a>`);
       }
-      parts.push(`<a href="#/providers">19 providers</a>`);
-      parts.push(`<a href="#/hardware">${state.hardware.length} hardware configs</a>`);
-      parts.push(`<a href="#/cloud">${state.cloud.length} cloud offerings</a>`);
-      if (modelCount) parts.push(`<a href="#/models">${modelCount} models</a>`);
+      parts.push(`<a href="/providers">19 providers</a>`);
+      parts.push(`<a href="/hardware">${state.hardware.length} hardware configs</a>`);
+      parts.push(`<a href="/cloud">${state.cloud.length} cloud offerings</a>`);
+      if (modelCount) parts.push(`<a href="/models">${modelCount} models</a>`);
       sub.innerHTML = parts.join(' \u00b7 ') + ' \u2014 compared in one place';
     }
 

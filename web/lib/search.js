@@ -68,7 +68,7 @@ function wireSearch(inputId, ddId) {
       updateHL();
     } else if (e.key === 'Enter' && hlIndex >= 0 && items[hlIndex]) {
       e.preventDefault();
-      router.navigate(items[hlIndex].hash);
+      router.navigate(items[hlIndex].path);
       dd.classList.remove('open');
       input.blur();
       input.value = '';
@@ -102,11 +102,11 @@ function wireSearch(inputId, ddId) {
           let hint = '';
           if (params) hint += fmtP(params);
           if (m.pipeline_tag) hint += (hint ? ' · ' : '') + m.pipeline_tag;
-          const hash = `#/model/${m.id}`;
-          items.push({ hash });
+          const path = `/model/${m.id}`;
+          items.push({ path });
           html += ddItem('dd-tag-m', 'model',
             org ? `<span class="o">${esc(org)}/</span>${esc(name)}` : esc(name),
-            hint, hash, input);
+            hint, path, input);
         }
       }
 
@@ -115,18 +115,18 @@ function wireSearch(inputId, ddId) {
       if (hw.length) {
         html += cat('Popular hardware');
         for (const [key, gpu] of hw) {
-          const hash = `#/hw/${key}`;
-          items.push({ hash });
+          const path = `/hw/${key}`;
+          items.push({ path });
           html += ddItem('dd-tag-h', 'hw', esc(gpu.name),
-            `${gpu.vram_gb}GB · ${gpu.vendor}`, hash, input);
+            `${gpu.vram_gb}GB · ${gpu.vendor}`, path, input);
         }
       }
 
       html += cat('Top providers');
       for (const p of PROVIDERS.slice(0, 3)) {
-        const hash = `#/provider/${p.id}`;
-        items.push({ hash });
-        html += ddItem('dd-tag-p', 'prov', esc(p.name), '', hash, input);
+        const path = `/provider/${p.id}`;
+        items.push({ path });
+        html += ddItem('dd-tag-p', 'prov', esc(p.name), '', path, input);
       }
 
       dd.innerHTML = html;
@@ -167,30 +167,30 @@ function wireSearch(inputId, ddId) {
         if (params) hint += fmtP(params);
         if (m.pipeline_tag) hint += (hint ? ' · ' : '') + m.pipeline_tag;
         if (provCount) hint += (hint ? ' · ' : '') + provCount + ' live';
-        const hash = `#/model/${m.id}`;
-        items.push({ hash });
+        const path = `/model/${m.id}`;
+        items.push({ path });
         html += ddItem('dd-tag-m', 'model',
           org ? `<span class="o">${esc(org)}/</span>${esc(name)}` : esc(name),
-          hint, hash, input);
+          hint, path, input);
       }
     }
 
     if (hwMatches.length) {
       html += cat('Hardware');
       for (const [key, gpu] of hwMatches) {
-        const hash = `#/hw/${key}`;
-        items.push({ hash });
+        const path = `/hw/${key}`;
+        items.push({ path });
         html += ddItem('dd-tag-h', 'hw', esc(gpu.name),
-          `${gpu.vram_gb}GB · ${gpu.vendor}`, hash, input);
+          `${gpu.vram_gb}GB · ${gpu.vendor}`, path, input);
       }
     }
 
     if (provMatches.length) {
       html += cat('Providers');
       for (const p of provMatches) {
-        const hash = `#/provider/${p.id}`;
-        items.push({ hash });
-        html += ddItem('dd-tag-p', 'prov', esc(p.name), '', hash, input);
+        const path = `/provider/${p.id}`;
+        items.push({ path });
+        html += ddItem('dd-tag-p', 'prov', esc(p.name), '', path, input);
       }
     }
 
@@ -224,14 +224,15 @@ function cat(label) {
   return `<div class="dd-cat">${esc(label)}</div>`;
 }
 
-function ddItem(tagClass, tagLabel, name, hint, hash, input) {
+function ddItem(tagClass, tagLabel, name, hint, path, input) {
   const inputId = input.id;
-  return `<div class="dd-item"
+  return `<a class="dd-item" href="${esc(path)}"
     onmouseenter="this.parentNode.querySelectorAll('.dd-item').forEach(el=>el.classList.remove('hl'));this.classList.add('hl')"
-    onclick="window.location.hash='${esc(hash)}';this.closest('.dd').classList.remove('open');document.getElementById('${inputId}').value=''"
+    onclick="this.closest('.dd').classList.remove('open');document.getElementById('${inputId}').value=''"
+    style="text-decoration:none;color:inherit;display:flex"
     ><span class="dd-tag ${tagClass}">${tagLabel}</span>
     <div class="dd-name">${name}</div>
-    <div class="dd-hint">${esc(hint)}</div></div>`;
+    <div class="dd-hint">${esc(hint)}</div></a>`;
 }
 
 function esc(s) {

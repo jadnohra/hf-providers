@@ -131,7 +131,7 @@ function renderFullCard(key, gpu) {
 
   let html = `<div class="sec mm-sec">
     <div class="sec-head">
-      <span class="sec-q">What runs on my <a href="#/hw/${esc(key)}">${esc(gpu.name)}</a>?</span>
+      <span class="sec-q">What runs on my <a href="/hw/${esc(key)}">${esc(gpu.name)}</a>?</span>
       ${summaryHtml}
       <div class="sec-line"></div>
       <button class="mm-expand" data-show-label="${totalFit ? `show ${totalFit} models` : 'show'}">${toggleLabel}</button>
@@ -148,7 +148,7 @@ function renderFullCard(key, gpu) {
     for (const m of comfortable) {
       const rt = multiRuntime ? ` (${m.best.runtime})` : '';
       html += `<tr>
-        <td class="name"><a class="link" href="#/model/${esc(m.id)}" data-tip="${esc(m.id + ' \u00b7 ' + fmtP(m.params) + ' params')}">${esc(m.short)}</a></td>
+        <td class="name"><a class="link" href="/model/${esc(m.id)}" data-tip="${esc(m.id + ' \u00b7 ' + fmtP(m.params) + ' params')}">${esc(m.short)}</a></td>
         <td>${m.best.quant || ''}</td>
         <td>${m.best.decode ? Math.round(m.best.decode) + ' tok/s' + rt : ''}</td>
       </tr>`;
@@ -160,7 +160,7 @@ function renderFullCard(key, gpu) {
     for (const m of tight) {
       const rt = multiRuntime ? ` (${m.best.runtime})` : '';
       html += `<tr>
-        <td class="name"><a class="link" href="#/model/${esc(m.id)}" data-tip="${esc(m.id + ' \u00b7 ' + fmtP(m.params) + ' params')}">${esc(m.short)}</a></td>
+        <td class="name"><a class="link" href="/model/${esc(m.id)}" data-tip="${esc(m.id + ' \u00b7 ' + fmtP(m.params) + ' params')}">${esc(m.short)}</a></td>
         <td>${m.best.quant || ''}</td>
         <td>${m.best.decode ? Math.round(m.best.decode) + ' tok/s' + rt : ''}</td>
       </tr>`;
