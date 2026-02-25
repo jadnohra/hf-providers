@@ -73,8 +73,8 @@ function renderSpecHeader(key, gpu) {
 
   return `<div class="spec-header">
     <div style="position:relative">
-      <div class="spec-title" id="hw-switch" style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:4px;text-decoration-color:var(--dm)">${esc(gpu.name)} <span style="font-size:11px;color:var(--dm)">\u25be</span></div>
-      <div class="spec-type">${esc(vendor)}</div>
+      <div class="spec-title">${esc(gpu.name)}</div>
+      <div class="spec-type">${esc(vendor)} <button class="switch-btn" id="hw-switch">switch \u25be</button></div>
       <div class="dd" id="hw-switch-dd" style="position:absolute;left:0;top:100%;min-width:300px;z-index:100;max-height:360px;overflow-y:auto"></div>
     </div>
     <div class="spec-grid">${specs}</div>

@@ -23,21 +23,12 @@ function dispatch() {
     currentCleanup = null;
   }
 
-  // Hero visible on landing and model pages; top-bar search on other detail pages
+  // Hero visible only on landing page; top-bar search on all detail pages
   const isLanding = (hash === '/');
-  const isModel = hash.startsWith('/model/');
-  const showHero = isLanding || isModel;
   const hero = document.querySelector('.hero');
-  if (hero) hero.style.display = showHero ? '' : 'none';
-  // On model pages, hide the title/subtitle/browse-links, keep just the search bar
-  const heroTitle = hero?.querySelector('h1');
-  const heroSub = hero?.querySelector('#hero-sub');
-  const browseLinks = hero?.querySelector('.browse-links');
-  if (heroTitle) heroTitle.style.display = isLanding ? '' : 'none';
-  if (heroSub) heroSub.style.display = isLanding ? '' : 'none';
-  if (browseLinks) browseLinks.style.display = isLanding ? '' : 'none';
+  if (hero) hero.style.display = isLanding ? '' : 'none';
   const topSearch = document.getElementById('top-search');
-  if (topSearch) topSearch.style.display = showHero ? 'none' : '';
+  if (topSearch) topSearch.style.display = isLanding ? 'none' : '';
 
   const container = document.getElementById('content');
   container.innerHTML = '';

@@ -7,7 +7,7 @@ import { wireSort } from '../lib/sort.js';
 import { tip, hwTip } from '../lib/tips.js';
 import { state } from '../app.js';
 
-export function render(container, match) {
+export function render(container, match, opts = {}) {
   const modelId = match[1];
   container.innerHTML = `<div class="loading">Loading ${esc(modelId)}...</div>`;
   let cancelled = false;
@@ -35,7 +35,7 @@ export function render(container, match) {
       }
     }
 
-    renderModel(container, model);
+    renderModel(container, model, opts);
   }).catch(err => {
     if (cancelled) return;
     container.innerHTML = `<div class="loading">Failed: ${esc(err.message)}</div>`;
@@ -44,7 +44,7 @@ export function render(container, match) {
   return () => { cancelled = true; };
 }
 
-function renderModel(container, model) {
+function renderModel(container, model, opts = {}) {
   let params = model.safetensorsParams;
   // Fallback chain: cached exact match → related model in cache → paramHint from name
   if (!params && state.models) {
@@ -75,27 +75,38 @@ function renderModel(container, model) {
   }
   let html = '';
 
-  // Model title
   const parts = model.id.split('/');
   const org = parts.length > 1 ? parts[0] : '';
   const name = parts.length > 1 ? parts.slice(1).join('/') : model.id;
-  html += `<div style="text-align:center;margin-bottom:8px">
-    <span style="font-size:11px;color:var(--mt)">${esc(org)}/</span><span style="font-size:14px;font-weight:700">${esc(name)}</span>
-  </div>`;
 
-  // Meta pills
-  html += '<div class="meta-pills center">';
-  if (params) {
-    html += `<span class="mp"><b>${esc(fmtP(params))}</b> params</span>`;
-    html += `<span class="mp">Q4: <b>${fmtGB(params, 0.5)}</b></span>`;
-    html += `<span class="mp">Q8: <b>${fmtGB(params, 1.0)}</b></span>`;
-    html += `<span class="mp">FP16: <b>${fmtGB(params, 2.0)}</b></span>`;
+  if (opts.embedded) {
+    // Compact title for landing page
+    html += `<div style="text-align:center;margin-bottom:8px">
+      <span style="font-size:11px;color:var(--mt)">${esc(org)}/</span><a href="#/model/${esc(model.id)}" style="font-size:14px;font-weight:700;color:var(--tx);text-decoration:none">${esc(name)}</a>
+    </div>`;
+  } else {
+    // Full header (same style as HW/provider)
+    let specGrid = '';
+    if (params) {
+      specGrid += `<div class="spec-item"><div class="spec-val">${esc(fmtP(params))}</div><div class="spec-label">Params</div></div>`;
+      specGrid += `<div class="spec-item"><div class="spec-val">${fmtGB(params, 0.5)}</div><div class="spec-label">Q4</div></div>`;
+      specGrid += `<div class="spec-item"><div class="spec-val">${fmtGB(params, 1.0)}</div><div class="spec-label">Q8</div></div>`;
+      specGrid += `<div class="spec-item"><div class="spec-val">${fmtGB(params, 2.0)}</div><div class="spec-label">FP16</div></div>`;
+    }
+    specGrid += `<div class="spec-item"><div class="spec-val">${fmtNum(model.likes)}</div><div class="spec-label">Likes</div></div>`;
+    specGrid += `<div class="spec-item"><div class="spec-val">${fmtNum(model.downloads)}</div><div class="spec-label">Downloads</div></div>`;
+
+    const tags = [model.libraryName, model.pipelineTag].filter(Boolean).join(' \u00b7 ');
+
+    html += `<div class="spec-header">
+      <div style="position:relative">
+        <div class="spec-title">${esc(name)}</div>
+        <div class="spec-type">${esc(org)}${tags ? ' \u00b7 ' + esc(tags) : ''} <button class="switch-btn" id="model-switch">switch \u25be</button></div>
+        <div class="dd" id="model-switch-dd" style="position:absolute;left:0;top:100%;min-width:340px;z-index:100;max-height:360px;overflow-y:auto"></div>
+      </div>
+      <div class="spec-grid">${specGrid}</div>
+    </div>`;
   }
-  if (model.libraryName) html += `<span class="mp">${esc(model.libraryName)}</span>`;
-  if (model.pipelineTag) html += `<span class="mp">${esc(model.pipelineTag)}</span>`;
-  html += `<span class="mp">${fmtNum(model.likes)} likes</span>`;
-  html += `<span class="mp">${fmtNum(model.downloads)} downloads</span>`;
-  html += '</div>';
 
   // Variants section (related models from same org)
   html += renderVariants(model);
@@ -128,6 +139,8 @@ function renderModel(container, model) {
 
   container.innerHTML = html;
 
+  // Wire model switch
+  wireModelSwitch(container);
   // Wire up snippet tabs
   wireSnippets(container);
   // Wire cost toggle
@@ -145,7 +158,7 @@ function renderProviders(model) {
     </div>`;
   }
 
-  let html = `<div class="sec">
+  let html = `<div class="sec" id="sec-providers">
     <div class="sec-head"><span class="sec-q">Where can I run it via API?</span><div class="sec-line"></div></div>
     <table class="mt" id="provider-table">
       <thead><tr><th>Status</th><th>Provider</th><th>$/1M in</th><th>$/1M out</th><th>Throughput</th><th>Tools</th><th>JSON</th></tr></thead>
@@ -250,6 +263,9 @@ function renderSnippet(modelId, providerName) {
 
 function renderHardwareCards(model, params) {
   const gpuKeys = ['rtx_4090', 'rtx_5090', 'm4_pro_48', 'm4_max_128', 'a100_pcie_80_gb'];
+  if (state.myGpu && state.myGpu.key && !gpuKeys.includes(state.myGpu.key)) {
+    gpuKeys.unshift(state.myGpu.key);
+  }
   const gpus = state.hardware || [];
 
   let cards = '';
@@ -257,6 +273,8 @@ function renderHardwareCards(model, params) {
     const entry = gpus.find(([k]) => k === key);
     if (!entry) continue;
     const [, gpu] = entry;
+    const isYours = state.myGpu && state.myGpu.key === key;
+    const yoursLabel = isYours ? ' <span class="hw-yours">(yours)</span>' : '';
     const runtimes = [];
     if (gpu.mlx_decode_eff != null) runtimes.push('mlx');
     runtimes.push('llama.cpp');
@@ -291,16 +309,16 @@ function renderHardwareCards(model, params) {
         fitClass = 'fit-n';
         fitText = "doesn't fit";
       }
-      cards += `<a class="hw-card" href="#/hw/${key}">
-        <div class="hn">${tip(esc(gpu.name), tipLines)}</div>
+      cards += `<a class="hw-card${isYours ? ' yours' : ''}" href="#/hw/${key}">
+        <div class="hn">${tip(esc(gpu.name), tipLines)}${yoursLabel}</div>
         <div class="ht">${esc(vendor)} \u00b7 ${vramLabel}</div>
         <div class="hm">${quantLabel} \u00b7 ${weightStr}</div>
         <div class="hf ${fitClass}">${fitText}</div>
       </a>`;
     } else {
       const weightStr = (params * 0.5 / 1e9).toFixed(0) + ' GB';
-      cards += `<a class="hw-card" href="#/hw/${key}">
-        <div class="hn">${tip(esc(gpu.name), tipLines)}</div>
+      cards += `<a class="hw-card${isYours ? ' yours' : ''}" href="#/hw/${key}">
+        <div class="hn">${tip(esc(gpu.name), tipLines)}${yoursLabel}</div>
         <div class="ht">${esc(vendor)} \u00b7 ${vramLabel}</div>
         <div class="hm">Q4 \u00b7 ${weightStr} needed</div>
         <div class="hf fit-n">doesn't fit</div>
@@ -308,7 +326,7 @@ function renderHardwareCards(model, params) {
     }
   }
 
-  return `<div class="sec">
+  return `<div class="sec" id="sec-hw">
     <div class="sec-head"><span class="sec-q">What can my hardware run?</span><div class="sec-line"></div><a class="sec-more" href="#/hw/rtx_4090">Pick your hardware</a></div>
     <div class="hw-row">${cards}</div>
   </div>`;
@@ -425,7 +443,7 @@ function renderCostComparison(model, params) {
            buildCol('Buy & run', 'tg-am', localData, mode);
   }
 
-  return `<div class="sec">
+  return `<div class="sec" id="sec-cost">
     <div class="sec-head">
       <span class="sec-q" id="cost-title">What's the cheapest way to run it?</span>
       <div class="sec-line"></div>
@@ -475,6 +493,79 @@ function renderProviderChips(model) {
     <div class="sec-head"><span class="sec-q">What does a provider serve?</span><div class="sec-line"></div><a class="sec-more" href="#/provider/${esc(liveProviders[0].name)}">Pick a provider</a></div>
     <div class="prov-strip">${chips}</div>
   </div>`;
+}
+
+function wireModelSwitch(container) {
+  const btn = container.querySelector('#model-switch');
+  const dd = container.querySelector('#model-switch-dd');
+  if (!btn || !dd) return;
+
+  const models = state.models || [];
+
+  function renderList(query) {
+    const q = query.toLowerCase();
+    let matches;
+    if (!q) {
+      matches = models.filter(m => m.safetensors?.total).slice(0, 10);
+    } else {
+      matches = models.filter(m => m.id.toLowerCase().includes(q)).slice(0, 10);
+    }
+
+    let html = '';
+    for (const m of matches) {
+      const mParts = m.id.split('/');
+      const mOrg = mParts.length > 1 ? mParts[0] : '';
+      const mName = mParts.length > 1 ? mParts.slice(1).join('/') : m.id;
+      const params = m.safetensors?.total;
+      const hint = params ? fmtP(params) : '';
+      html += `<div class="dd-item" data-id="${esc(m.id)}" style="cursor:pointer">
+        <div class="dd-name">${mOrg ? `<span class="o">${esc(mOrg)}/</span>` : ''}${esc(mName)}</div>
+        <div class="dd-hint">${esc(hint)}</div>
+      </div>`;
+    }
+    if (!html) html = '<div style="padding:8px;text-align:center;color:var(--dm);font-size:11px">No matches</div>';
+    return html;
+  }
+
+  function wireItems() {
+    dd.querySelectorAll('.dd-item').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        dd.querySelectorAll('.dd-item').forEach(x => x.classList.remove('hl'));
+        el.classList.add('hl');
+      });
+      el.addEventListener('click', e => {
+        e.stopPropagation();
+        dd.classList.remove('open');
+        window.location.hash = '#/model/' + el.dataset.id;
+      });
+    });
+  }
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    if (dd.classList.contains('open')) {
+      dd.classList.remove('open');
+      return;
+    }
+    dd.innerHTML = `<input class="dd-search" placeholder="Search models..." style="display:block;width:calc(100% - 16px);margin:6px 8px;padding:6px 8px;font-size:11px;border:1px solid var(--bd);border-radius:4px;outline:none">`
+      + `<div class="dd-list">${renderList('')}</div>`;
+    dd.classList.add('open');
+    const inp = dd.querySelector('.dd-search');
+    const list = dd.querySelector('.dd-list');
+    inp.focus();
+    inp.addEventListener('click', ev => ev.stopPropagation());
+    inp.addEventListener('input', () => {
+      list.innerHTML = renderList(inp.value.trim());
+      wireItems();
+    });
+    wireItems();
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#model-switch') && !e.target.closest('#model-switch-dd')) {
+      dd.classList.remove('open');
+    }
+  });
 }
 
 function wireSnippets(container) {

@@ -104,6 +104,10 @@ body{font-family:var(--f);background:var(--bg);color:var(--tx);font-size:14px;ov
 .var-chip .pn{font-size:10px;font-weight:600}
 .var-chip .pm{font-size:9px;color:var(--mt)}
 
+/* SWITCH BUTTON */
+.switch-btn{font-size:9px;color:var(--ac);background:none;border:1px solid var(--ac);border-radius:4px;padding:2px 10px;cursor:pointer;font-family:var(--f);font-weight:500;margin-left:8px;vertical-align:middle;transition:all .12s}
+.switch-btn:hover{background:var(--ac-s)}
+
 /* SNIPPET PREVIEW */
 .snip-preview{margin-top:8px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
 .snip-bar{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--bd);background:var(--s2)}
@@ -217,6 +221,24 @@ a.cc-row:hover>span:first-child{color:var(--ac)}
 .st-hero-desc{font-size:15px;margin-top:10px;opacity:.85}
 .st-hero-specs{display:flex;gap:24px;margin-top:20px;font-size:13px;opacity:.7}
 .st-sec-title{font-size:18px;font-weight:700;color:var(--tx);margin-bottom:16px}
+
+/* MY MACHINE SECTION */
+.sec-q a{color:var(--ac);text-decoration:none;font-weight:inherit;font-size:inherit}
+.sec-q a:hover{text-decoration:underline}
+.mm-change{font-size:9px;color:var(--dm);background:none;border:1px solid var(--bd);border-radius:4px;padding:2px 8px;cursor:pointer;font-family:var(--f)}
+.mm-change:hover{color:var(--ac);border-color:var(--ac)}
+.mm-btns{display:flex;gap:6px;margin-top:2px}
+.mm-mem-btn{padding:5px 14px;font-size:11px;font-weight:600;border:1px solid var(--bd);border-radius:var(--rs);background:var(--sf);color:var(--tx);cursor:pointer;font-family:var(--f);transition:all .12s}
+.mm-mem-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--ac-s)}
+.hw-card.yours{border-left:3px solid var(--ac)}
+.hw-yours{font-size:8px;color:var(--ac);font-weight:600;letter-spacing:.3px;margin-left:4px}
+.mm-summary{font-size:10px;color:var(--dm);white-space:nowrap}
+.mm-expand{font-size:10px;color:var(--ac);background:none;border:1.5px solid var(--ac);border-radius:99px;padding:3px 12px;cursor:pointer;font-weight:600;font-family:var(--f);white-space:nowrap;transition:all .12s;letter-spacing:.2px}
+.mm-expand:hover{background:var(--ac-s)}
+.your-hw{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--ac-s);border:1px solid var(--ac-b);border-radius:var(--r);text-decoration:none;color:inherit;transition:border-color .12s}
+.your-hw:hover{border-color:var(--ac)}
+.your-hw-name{font-size:13px;font-weight:700;color:var(--ac)}
+.your-hw-specs{font-size:11px;color:var(--mt)}
 
 /* FOOTER */
 .foot{max-width:720px;margin:0 auto;padding:16px 20px;text-align:center;font-size:10px;color:var(--dm);border-top:1px solid var(--bd)}

@@ -6,3 +6,5 @@
 *.swo
 *~
 claude.sh
+.claude/
+web/pkg/

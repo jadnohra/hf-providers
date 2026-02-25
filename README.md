@@ -164,10 +164,13 @@ Cerebras, Cohere, fal, Featherless, Fireworks, Groq, Hyperbolic, Nebius, Novita,
 
 The core Rust crate (`hf-providers-core`) is feature-gated: the `network` feature gates `reqwest`/`tokio`/`dirs` for the CLI, while the Wasm build compiles with no default features and links only `serde`, `serde_json`, and `wasm-bindgen`. The web crate (`hf-providers-web`) exposes estimation, snippet generation, hardware lookup, and cost calculation as JS-callable functions.
 
+Your GPU is auto-detected via WebGL. The landing page shows "What runs on my GPU?" with model fit estimates, and your GPU is highlighted on model detail and hardware browse pages. Apple Silicon users can pick their memory configuration. If detection fails, a search dropdown lets you pick any GPU manually.
+
 Pages:
-- **Model detail** -- providers table, cost comparison (API vs cloud rental vs buy & run), hardware estimation cards, code snippets, variant detection
-- **Hardware detail** -- spec header, check any model (quant x runtime matrix), compare two GPUs side by side with speed ratios, reference model table, cloud rental listings, electricity cost per model
-- **Provider detail** -- model catalog, compare two providers with shared/exclusive breakdown and speed ratios
+- **Landing** -- trending model detail with "What runs on my GPU?" section (collapsible, shows comfortable/tight counts)
+- **Model detail** -- spec header with model switcher, providers table, cost comparison (API vs cloud rental vs buy & run), hardware estimation cards (your GPU first), code snippets, variant detection
+- **Hardware detail** -- spec header with GPU switcher, check any model (quant x runtime matrix), compare two GPUs side by side with speed ratios, reference model table, cloud rental listings, electricity cost per model
+- **Provider detail** -- provider switcher, model catalog, compare two providers with shared/exclusive breakdown and speed ratios
 - **Browse** -- sortable and filterable tables for all models, hardware, providers, and cloud GPU offerings
 - **Stats** -- superlatives across models, providers, hardware, and cloud
 
