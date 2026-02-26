@@ -16,6 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: JS syntax check
+        run: |
+          ok=true
+          for f in $(find web -name '*.js' -not -path 'web/pkg/*'); do
+            node --check "$f" || ok=false
+          done
+          $ok
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
