@@ -1,0 +1,43 @@
+name: Hourly Snapshot
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    name: Capture provider snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run snapshot
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python3 scripts/snapshot.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add snapshots/
+          if git diff --cached --quiet; then
+            echo "No new snapshot to commit"
+            exit 0
+          fi
+          FILE=$(git diff --cached --name-only | head -1 | xargs basename)
+          git commit -m "snapshot: ${FILE} [skip ci]"
+          for i in 1 2 3; do
+            git push && break
+            echo "Push failed, pulling with rebase (attempt $i)..."
+            git pull --rebase
+            sleep 2
+          done
