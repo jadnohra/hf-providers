@@ -7,6 +7,7 @@ import { wireSort } from '../lib/sort.js';
 import { tip, hwTip } from '../lib/tips.js';
 import { navigate } from '../lib/router.js';
 import { state } from '../app.js';
+import { gpuKeyToSlug } from '../lib/compare-utils.js';
 
 export function render(container, match, opts = {}) {
   const modelId = match[1];
@@ -342,7 +343,8 @@ function renderHardwareCards(model, params, moeWarning) {
         fitClass = 'fit-n';
         fitText = "doesn't fit";
       }
-      cards += `<a class="hw-card${isYours ? ' yours' : ''}" href="/hw/${key}">
+      const checkHref = `/check/${model.id}/${gpuKeyToSlug(key)}`;
+      cards += `<a class="hw-card${isYours ? ' yours' : ''}" href="${checkHref}">
         <div class="hn">${tip(esc(gpu.name), tipLines)}${yoursLabel}</div>
         <div class="ht">${esc(vendor)} \u00b7 ${vramLabel}</div>
         <div class="hm">${quantLabel} \u00b7 ${weightStr}</div>
@@ -350,7 +352,8 @@ function renderHardwareCards(model, params, moeWarning) {
       </a>`;
     } else {
       const weightStr = (params * 0.5 / 1e9).toFixed(0) + ' GB';
-      cards += `<a class="hw-card${isYours ? ' yours' : ''}" href="/hw/${key}">
+      const checkHref = `/check/${model.id}/${gpuKeyToSlug(key)}`;
+      cards += `<a class="hw-card${isYours ? ' yours' : ''}" href="${checkHref}">
         <div class="hn">${tip(esc(gpu.name), tipLines)}${yoursLabel}</div>
         <div class="ht">${esc(vendor)} \u00b7 ${vramLabel}</div>
         <div class="hm">Q4 \u00b7 ${weightStr} needed</div>

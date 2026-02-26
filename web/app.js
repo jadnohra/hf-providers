@@ -14,6 +14,10 @@ import { render as renderBrowseHw } from './views/browse-hw.js';
 import { render as renderBrowseProviders } from './views/browse-providers.js';
 import { render as renderBrowseCloud } from './views/browse-cloud.js';
 import { render as renderStats } from './views/stats.js';
+import { render as renderCompareProviders } from './views/compare-providers.js';
+import { render as renderCompareHw } from './views/compare-hw.js';
+import { render as renderCheckModelHw } from './views/check-model-hw.js';
+import { resolveCompareSlug, canonicalOrder, gpuKeyToSlug } from './lib/compare-utils.js';
 
 export const state = {
   hardware: null,
@@ -88,6 +92,8 @@ async function boot() {
   router.register(/^\/model\/(.+)$/, renderModel);
   router.register(/^\/hw\/(.+)$/, renderHardware);
   router.register(/^\/provider\/(.+)$/, renderProvider);
+  router.register(/^\/compare\/(.+)$/, renderCompare);
+  router.register(/^\/check\/([^/]+\/[^/]+)\/([^/]+)$/, renderCheckModelHwRoute);
 
   // Init search + global tooltips
   search.init();
@@ -95,6 +101,35 @@ async function boot() {
 
   // Start routing
   router.start();
+}
+
+function renderCompare(container, match) {
+  const slug = match[1];
+  const resolved = resolveCompareSlug(slug, state.hardware);
+  if (!resolved) {
+    container.innerHTML = '<div class="loading">Could not resolve comparison</div>';
+    return;
+  }
+
+  // Enforce canonical ordering: redirect if not alphabetical
+  const [ca, cb] = resolved.type === 'hw'
+    ? canonicalOrder(gpuKeyToSlug(resolved.a), gpuKeyToSlug(resolved.b))
+    : canonicalOrder(resolved.a, resolved.b);
+  const canonSlug = `${ca}-vs-${cb}`;
+  if (canonSlug !== slug) {
+    router.navigate('/compare/' + canonSlug);
+    return;
+  }
+
+  if (resolved.type === 'provider') {
+    return renderCompareProviders(container, resolved.a, resolved.b);
+  } else {
+    return renderCompareHw(container, resolved.a, resolved.b);
+  }
+}
+
+function renderCheckModelHwRoute(container, match) {
+  return renderCheckModelHw(container, match[1], match[2]);
 }
 
 boot();

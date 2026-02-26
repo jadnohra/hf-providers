@@ -9,6 +9,7 @@ baked-in content. The SPA boots on top via /app.js.
 import json
 import os
 import html
+from itertools import combinations
 from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -484,6 +485,217 @@ def build_stats_page(models, hardware, cloud):
     return [path]
 
 
+# ── Slug helpers ──
+
+def gpu_key_to_slug(key):
+    return key.replace('_', '-')
+
+
+def canonical_pair(a, b):
+    """Return (a, b) in alphabetical order."""
+    return (a, b) if a <= b else (b, a)
+
+
+POPULAR_GPU_KEYS = [
+    'rtx_4090', 'rtx_5090', 'm4_max_128', 'm4_pro_48', 'm4_pro_24',
+    'a100_pcie_80_gb', 'h100_sxm5_80_gb', 'rtx_3090', 'rx_7900_xtx',
+    'rtx_4080', 'rtx_3080_ti', 'm3_max_96', 'm4_max_64', 'h200_sxm_141_gb',
+    'rtx_3060', 'rtx_4070_ti', 'a6000', 'rtx_5080', 'm2_ultra_192',
+    'rtx_4060_ti',
+]
+
+
+# ── Provider vs Provider pages ──
+
+def build_compare_provider_pages(models):
+    """Generate provider-vs-provider comparison pages for pairs sharing 3+ models."""
+    if not models:
+        return []
+
+    # Build provider -> set of model IDs
+    prov_model_ids = {}
+    prov_model_map = {}  # provider -> {model_id: model_data}
+    for m in models:
+        for ipm in m.get('inferenceProviderMapping', []):
+            if ipm.get('status') == 'live':
+                pid = ipm['provider']
+                if pid not in prov_model_ids:
+                    prov_model_ids[pid] = set()
+                    prov_model_map[pid] = {}
+                prov_model_ids[pid].add(m['id'])
+                prov_model_map[pid][m['id']] = (m, ipm)
+
+    urls = []
+    for (pid_a, pid_b) in combinations(sorted(PROVIDERS.keys()), 2):
+        ids_a = prov_model_ids.get(pid_a, set())
+        ids_b = prov_model_ids.get(pid_b, set())
+        shared = ids_a & ids_b
+        if len(shared) < 3:
+            continue
+
+        a, b = canonical_pair(pid_a, pid_b)
+        name_a = PROVIDERS[a]
+        name_b = PROVIDERS[b]
+
+        title = f'{name_a} vs {name_b} - Provider Comparison | vram.run'
+        description = f'Compare {name_a} and {name_b}: {len(shared)} shared models, pricing and throughput side by side.'
+
+        content = f'<h1>{esc(name_a)} vs {esc(name_b)}</h1>'
+        content += f'<p>{len(ids_a)} vs {len(ids_b)} models, {len(shared)} shared</p>'
+
+        # Shared models table
+        if shared:
+            content += '<h2>Shared models</h2>'
+            content += '<table><thead><tr><th>Model</th>'
+            content += f'<th>{esc(name_a)} $/1M out</th><th>{esc(name_a)} tok/s</th>'
+            content += f'<th>{esc(name_b)} $/1M out</th><th>{esc(name_b)} tok/s</th>'
+            content += '</tr></thead><tbody>'
+
+            for mid in sorted(shared):
+                short = mid.split('/')[-1]
+                m_a, ipm_a = prov_model_map.get(a, {}).get(mid, (None, None))
+                m_b, ipm_b = prov_model_map.get(b, {}).get(mid, (None, None))
+
+                def prov_cells(ipm):
+                    if not ipm:
+                        return '<td></td><td></td>'
+                    price = ipm.get('price', {})
+                    perf = ipm.get('performance', {})
+                    op = price.get('outputPerToken')
+                    tp = perf.get('tokensPerSecond')
+                    op_str = f'${op * 1e6:.2f}' if op and op > 0 else ''
+                    tp_str = f'{int(tp)} tok/s' if tp else ''
+                    return f'<td>{op_str}</td><td>{tp_str}</td>'
+
+                content += f'<tr><td><a href="/model/{esc(mid)}">{esc(short)}</a></td>'
+                content += prov_cells(ipm_a) + prov_cells(ipm_b)
+                content += '</tr>'
+
+            content += '</tbody></table>'
+
+        slug = f'{a}-vs-{b}'
+        path = f'/compare/{slug}'
+        page = make_page(path, title, description, content)
+        write_page(path, page)
+        urls.append(path)
+
+    return urls
+
+
+# ── Hardware vs Hardware pages ──
+
+def build_compare_hw_pages(hardware):
+    """Generate HW-vs-HW comparison pages for popular GPU pairs."""
+    if not hardware:
+        return []
+
+    hw_map = {}
+    for entry in hardware:
+        hw_map[entry[0]] = entry[1]
+
+    # Filter to popular GPUs that exist
+    pop_keys = [k for k in POPULAR_GPU_KEYS if k in hw_map]
+
+    urls = []
+    for (key_a, key_b) in combinations(pop_keys, 2):
+        a, b = canonical_pair(key_a, key_b)
+        gpu_a = hw_map[a]
+        gpu_b = hw_map[b]
+        slug_a = gpu_key_to_slug(a)
+        slug_b = gpu_key_to_slug(b)
+
+        title = f'{gpu_a["name"]} vs {gpu_b["name"]} - GPU Comparison | vram.run'
+        description = (f'{gpu_a["name"]} ({gpu_a.get("vram_gb", 0)}GB) vs {gpu_b["name"]} ({gpu_b.get("vram_gb", 0)}GB): '
+                       f'compare VRAM, bandwidth, TFLOPS, and what models fit.')
+
+        content = f'<h1>{esc(gpu_a["name"])} vs {esc(gpu_b["name"])}</h1>'
+
+        # Specs table
+        content += '<table><thead><tr><th>Metric</th>'
+        content += f'<th>{esc(gpu_a["name"])}</th><th>{esc(gpu_b["name"])}</th>'
+        content += '</tr></thead><tbody>'
+
+        specs = [
+            ('VRAM', 'vram_gb', 'GB'),
+            ('Bandwidth', 'mem_bw_gb_s', 'GB/s'),
+            ('FP16 TFLOPS', 'fp16_tflops', ''),
+            ('TDP', 'tdp_w', 'W'),
+        ]
+        for label, field, unit in specs:
+            va = gpu_a.get(field, 0)
+            vb = gpu_b.get(field, 0)
+            fmt_a = f'{int(va)} {unit}' if isinstance(va, (int, float)) and field != 'fp16_tflops' else f'{va:.1f} {unit}'
+            fmt_b = f'{int(vb)} {unit}' if isinstance(vb, (int, float)) and field != 'fp16_tflops' else f'{vb:.1f} {unit}'
+            content += f'<tr><td>{esc(label)}</td><td>{fmt_a}</td><td>{fmt_b}</td></tr>'
+
+        for g, k in [(gpu_a, a), (gpu_b, b)]:
+            if g.get('street_usd'):
+                pass  # handled in row below
+        sa = gpu_a.get('street_usd')
+        sb = gpu_b.get('street_usd')
+        if sa or sb:
+            content += f'<tr><td>Street price</td><td>{"$" + str(sa) if sa else ""}</td><td>{"$" + str(sb) if sb else ""}</td></tr>'
+
+        content += '</tbody></table>'
+
+        # Note about reference models (computed by SPA)
+        content += '<p>Reference model performance computed in browser.</p>'
+
+        slug = f'{slug_a}-vs-{slug_b}'
+        path = f'/compare/{slug}'
+        page = make_page(path, title, description, content)
+        write_page(path, page)
+        urls.append(path)
+
+    return urls
+
+
+# ── "Can I run X on Y" check pages ──
+
+def build_check_pages(models, hardware):
+    """Generate check pages for top models x popular GPUs."""
+    if not models or not hardware:
+        return []
+
+    hw_map = {}
+    for entry in hardware:
+        hw_map[entry[0]] = entry[1]
+
+    # Pick popular GPUs that exist
+    pop_keys = [k for k in POPULAR_GPU_KEYS if k in hw_map]
+
+    # Pick top ~100 models by likes (that have params)
+    eligible = [m for m in models if m.get('safetensors', {}).get('total')]
+    eligible.sort(key=lambda m: m.get('likes', 0), reverse=True)
+    top_models = eligible[:100]
+
+    urls = []
+    for m in top_models:
+        model_id = m['id']
+        short_name = model_id.split('/')[-1]
+        params = m['safetensors']['total']
+        params_str = fmt_params(params)
+
+        for gpu_key in pop_keys:
+            gpu = hw_map[gpu_key]
+            gpu_slug = gpu_key_to_slug(gpu_key)
+
+            title = f'Can I run {short_name} on {gpu["name"]}? | vram.run'
+            description = f'{short_name} ({params_str}) on {gpu["name"]} ({gpu.get("vram_gb", 0)}GB VRAM): fit check, quant options, estimated performance.'
+
+            content = f'<h1>{esc(short_name)} on {esc(gpu["name"])}</h1>'
+            content += f'<p>{esc(params_str)} params &middot; {gpu.get("vram_gb", 0)}GB VRAM &middot; {int(gpu.get("mem_bw_gb_s", 0))} GB/s</p>'
+            # SPA fills in the actual estimates
+            content += '<p>Quantization estimates computed in browser.</p>'
+
+            path = f'/check/{model_id}/{gpu_slug}'
+            page = make_page(path, title, description, content)
+            write_page(path, page)
+            urls.append(path)
+
+    return urls
+
+
 # ── Sitemap + robots.txt + 404 ──
 
 def build_sitemap(urls):
@@ -499,9 +711,14 @@ def build_sitemap(urls):
     for p in browse:
         xml += f'  <url><loc>{BASE_URL}{p}</loc><lastmod>{now}</lastmod><priority>0.8</priority></url>\n'
 
+    # Comparison pages (slightly higher priority than detail)
+    compare_urls = sorted(u for u in urls if u.startswith('/compare/') or u.startswith('/check/'))
+    for u in compare_urls:
+        xml += f'  <url><loc>{BASE_URL}{u}</loc><lastmod>{now}</lastmod><priority>0.7</priority></url>\n'
+
     # Detail pages
     for u in sorted(urls):
-        if u in browse or u == '/':
+        if u in browse or u == '/' or u.startswith('/compare/') or u.startswith('/check/'):
             continue
         xml += f'  <url><loc>{BASE_URL}{u}</loc><lastmod>{now}</lastmod><priority>0.6</priority></url>\n'
 
@@ -557,6 +774,19 @@ def main():
     # Provider pages
     urls = build_provider_pages(models)
     print(f'  provider pages: {len(urls)}')
+    all_urls.extend(urls)
+
+    # Comparison pages
+    urls = build_compare_provider_pages(models)
+    print(f'  compare provider pages: {len(urls)}')
+    all_urls.extend(urls)
+
+    urls = build_compare_hw_pages(hardware)
+    print(f'  compare hw pages: {len(urls)}')
+    all_urls.extend(urls)
+
+    urls = build_check_pages(models, hardware)
+    print(f'  check pages: {len(urls)}')
     all_urls.extend(urls)
 
     # Browse pages

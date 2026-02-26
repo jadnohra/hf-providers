@@ -16,6 +16,8 @@ web/hardware/
 web/providers/
 web/cloud/
 web/stats/
+web/compare/
+web/check/
 web/sitemap.xml
 web/robots.txt
 web/404.html

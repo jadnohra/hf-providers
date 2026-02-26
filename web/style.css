@@ -241,6 +241,21 @@ a.cc-row:hover>span:first-child{color:var(--ac)}
 .your-hw-name{font-size:13px;font-weight:700;color:var(--ac)}
 .your-hw-specs{font-size:11px;color:var(--mt)}
 
+/* COMPARISON HEADER */
+.cmp-header{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);padding:16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cmp-side{flex:1;min-width:0}
+.cmp-side-name{font-size:18px;font-weight:800;letter-spacing:-.5px}
+.cmp-side-meta{font-size:10px;color:var(--dm);margin-top:2px}
+.cmp-vs{flex-shrink:0;font-size:12px;font-weight:800;color:var(--dm);letter-spacing:.1em;padding:4px 10px;background:var(--s2);border-radius:99px}
+.cmp-picker{position:relative;display:inline-block}
+.cmp-picker .dd{position:absolute;left:0;top:100%;min-width:240px;z-index:100;max-height:360px;overflow-y:auto}
+
+/* CHECK VERDICTS */
+.verdict-yes{color:var(--gn);font-weight:700;font-size:13px}
+.verdict-tight{color:var(--am);font-weight:700;font-size:13px}
+.verdict-no{color:var(--rd);font-weight:700;font-size:13px}
+.verdict-box{padding:12px 16px;background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:16px}
+
 /* FOOTER */
 .foot{max-width:720px;margin:0 auto;padding:16px 20px;text-align:center;font-size:10px;color:var(--dm);border-top:1px solid var(--bd)}
 .foot a{color:var(--mt);text-decoration:none;margin:0 6px}
