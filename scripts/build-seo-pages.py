@@ -473,13 +473,13 @@ def build_stats_page(models, hardware, cloud):
     hw_count = len(hardware) if hardware else 0
     cloud_count = len(cloud) if cloud else 0
 
-    title = 'Fun Stats | vram.run'
-    description = f'Stats across {model_count} models, {len(PROVIDERS)} providers, {hw_count} GPUs, {cloud_count} cloud offerings.'
+    title = 'State of Inference | vram.run'
+    description = f'Live analytics across {model_count} models, {len(PROVIDERS)} providers, {hw_count} GPUs, {cloud_count} cloud offerings.'
 
-    content = '<h1>Fun Stats</h1>'
-    content += f'<p>{model_count} models from {len(PROVIDERS)} providers, {hw_count} GPUs, {cloud_count} cloud offerings</p>'
+    content = '<h1>State of Inference</h1>'
+    content += f'<p>Live analytics from {model_count} models, {len(PROVIDERS)} providers, {hw_count} hardware configs</p>'
 
-    path = '/stats'
+    path = '/state-of-inference'
     page = make_page(path, title, description, content)
     write_page(path, page)
     return [path]
@@ -707,7 +707,7 @@ def build_sitemap(urls):
     xml += f'  <url><loc>{BASE_URL}/</loc><lastmod>{now}</lastmod><priority>1.0</priority></url>\n'
 
     # Browse pages (high priority)
-    browse = ['/models', '/hardware', '/providers', '/cloud', '/stats']
+    browse = ['/models', '/hardware', '/providers', '/cloud', '/state-of-inference']
     for p in browse:
         xml += f'  <url><loc>{BASE_URL}{p}</loc><lastmod>{now}</lastmod><priority>0.8</priority></url>\n'
 
@@ -795,7 +795,7 @@ def main():
         (lambda: build_browse_hw(hardware), 'hardware browse'),
         (lambda: build_browse_providers(models), 'providers browse'),
         (lambda: build_browse_cloud(cloud, hardware), 'cloud browse'),
-        (lambda: build_stats_page(models, hardware, cloud), 'stats'),
+        (lambda: build_stats_page(models, hardware, cloud), 'state-of-inference'),
     ]:
         urls = builder()
         print(f'  {label}: {len(urls)}')

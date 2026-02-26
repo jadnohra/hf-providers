@@ -176,6 +176,15 @@ Pages:
 
 Static site in `web/`, built with `scripts/build-web.sh` (runs `wasm-pack`, converts TOML data to JSON, fetches model cache from HF API). Deployed to Cloudflare Pages.
 
+Local dev:
+
+```
+scripts/build-web.sh          # full build (wasm + data)
+npx serve web/ -s -l 8080     # local server with SPA fallback
+```
+
+The `-s` flag makes `serve` return `index.html` for all paths, so pushState routes like `/state-of-inference` and `/model/org/name` work correctly.
+
 ## License
 
 MIT OR Apache-2.0

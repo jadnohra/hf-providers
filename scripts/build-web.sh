@@ -12,8 +12,8 @@
 # The site uses pushState routing. Pre-rendered pages provide SEO content;
 # the SPA (app.js) boots on top for interactivity.
 #
-# Local dev: after building, run `python3 -m http.server 8080` from web/
-# and use Cmd+Shift+R to bypass browser cache after changes.
+# Local dev: after building, run `npx serve web/ -s -l 8080`
+# (-s enables SPA fallback so pushState routes work)
 
 set -euo pipefail
 

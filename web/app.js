@@ -88,7 +88,8 @@ async function boot() {
   router.register(/^\/hardware$/, renderBrowseHw);
   router.register(/^\/providers$/, renderBrowseProviders);
   router.register(/^\/cloud$/, renderBrowseCloud);
-  router.register(/^\/stats$/, renderStats);
+  router.register(/^\/state-of-inference(?:\/([\w-]+))?$/, renderStateOfInference);
+  router.register(/^\/stats$/, () => router.navigate('/state-of-inference'));
   router.register(/^\/model\/(.+)$/, renderModel);
   router.register(/^\/hw\/(.+)$/, renderHardware);
   router.register(/^\/provider\/(.+)$/, renderProvider);
@@ -126,6 +127,16 @@ function renderCompare(container, match) {
   } else {
     return renderCompareHw(container, resolved.a, resolved.b);
   }
+}
+
+function renderStateOfInference(container, match) {
+  const cleanup = renderStats(container, match);
+  const section = match[1];
+  if (section) {
+    const el = document.getElementById(section);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  }
+  return cleanup;
 }
 
 function renderCheckModelHwRoute(container, match) {

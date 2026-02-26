@@ -15,7 +15,7 @@ web/models/
 web/hardware/
 web/providers/
 web/cloud/
-web/stats/
+web/state-of-inference/
 web/compare/
 web/check/
 web/sitemap.xml
