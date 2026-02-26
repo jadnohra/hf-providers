@@ -766,6 +766,7 @@ async fn cmd_machine(client: &HfClient, input: Option<&str>, model_query: Option
     struct ModelEntry {
         short: String,
         params: u64,
+        is_moe: bool,
     }
 
     let entries: Vec<ModelEntry> = if let Some(query) = model_query {
@@ -791,10 +792,11 @@ async fn cmd_machine(client: &HfClient, input: Option<&str>, model_query: Option
             .ok_or_else(|| anyhow::anyhow!("cannot determine param count for {}\n  \
                 try: hf-providers machine {} org/Model-70B-Instruct", model.id, key))?;
         let short = model.id.rsplit('/').next().unwrap_or(&model.id);
-        vec![ModelEntry { short: short.to_string(), params }]
+        let is_moe = Model::detect_moe(&model.id) && model.safetensors_params.is_none();
+        vec![ModelEntry { short: short.to_string(), params, is_moe }]
     } else {
         REFERENCE_MODELS.iter()
-            .map(|rm| ModelEntry { short: rm.short.to_string(), params: rm.params })
+            .map(|rm| ModelEntry { short: rm.short.to_string(), params: rm.params, is_moe: false })
             .collect()
     };
 
@@ -875,6 +877,12 @@ async fn cmd_machine(client: &HfClient, input: Option<&str>, model_query: Option
             println!("{table}");
         } else {
             println!("  {}", s_err().apply_to("does not fit, even at Q4"));
+        }
+        if entries[0].is_moe {
+            println!(
+                "  {}",
+                s_dim().apply_to("(MoE model -- estimates use active params only, actual weights are larger)")
+            );
         }
     } else {
         // Reference model list: show categories per runtime.
@@ -1036,6 +1044,7 @@ async fn cmd_need(client: &HfClient, query: &str) -> anyhow::Result<()> {
 
     let short = model.id.rsplit('/').next().unwrap_or(&model.id);
     let weight_q4 = params as f64 * 0.5 / 1e9;
+    let is_moe = Model::detect_moe(&model.id) && model.safetensors_params.is_none();
 
     // Header.
     println!();
@@ -1045,6 +1054,12 @@ async fn cmd_need(client: &HfClient, query: &str) -> anyhow::Result<()> {
         s_param().apply_to(Model::fmt_params(params)),
         s_dim().apply_to(format!("Q4 = {:.0} GB", weight_q4)),
     );
+    if is_moe {
+        println!(
+            "  {}",
+            s_dim().apply_to("(MoE model -- estimates use active params only, actual weights are larger)")
+        );
+    }
 
     // ── API providers ────────────────────────────────────────────────
     let api_providers: Vec<&ProviderInfo> = model
@@ -1402,6 +1417,14 @@ fn print_model_full(model: &Model, _variants: &[Model], opts: &Cli) {
             s_dim().apply_to(format!("~{}", fmt_gb(q8))),
             dot,
             s_dim().apply_to(format!("~{}", fmt_gb(fp16))),
+        );
+    }
+    let is_moe = Model::detect_moe(&model.id);
+    let params_from_hint = model.safetensors_params.is_none();
+    if is_moe && params_from_hint {
+        println!(
+            "{}",
+            s_dim().apply_to("  (MoE model -- weight estimates use active params only, actual weights are larger)")
         );
     }
 

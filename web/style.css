@@ -232,6 +232,7 @@ a.cc-row:hover>span:first-child{color:var(--ac)}
 .mm-mem-btn:hover{border-color:var(--ac);color:var(--ac);background:var(--ac-s)}
 .hw-card.yours{border-left:3px solid var(--ac)}
 .hw-yours{font-size:8px;color:var(--ac);font-weight:600;letter-spacing:.3px;margin-left:4px}
+.moe-warn{font-size:10px;color:var(--am);font-style:italic}
 .mm-summary{font-size:10px;color:var(--dm);white-space:nowrap}
 .mm-expand{font-size:10px;color:var(--ac);background:none;border:1.5px solid var(--ac);border-radius:99px;padding:3px 12px;cursor:pointer;font-weight:600;font-family:var(--f);white-space:nowrap;transition:all .12s;letter-spacing:.2px}
 .mm-expand:hover{background:var(--ac-s)}

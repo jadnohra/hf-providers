@@ -1,0 +1,12 @@
+{
+  "meta-llama/Llama-4-Maverick-17B-128E-Instruct": {
+    "extracted": "2026-02-26",
+    "source": "readme-llm",
+    "total_params": 400000000000
+  },
+  "meta-llama/Llama-4-Scout-17B-16E-Instruct": {
+    "extracted": "2026-02-26",
+    "source": "readme-llm",
+    "total_params": 109000000000
+  }
+}

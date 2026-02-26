@@ -297,10 +297,14 @@ function wireModelCheck(container, gpu) {
     }
 
     const shortName = model.id.split('/').pop();
+    const isMoe = wasm.isMoe(shortName);
     let html = `<div style="margin-bottom:6px">
       <a class="link" href="/model/${esc(model.id)}" style="font-weight:700">${esc(shortName)}</a>
       <span style="color:var(--dm);margin-left:6px">${fmtP(params)} params</span>
     </div>`;
+    if (isMoe) {
+      html += `<div class="moe-warn" style="margin-bottom:6px">MoE model -- estimates may be inaccurate if param count reflects active params only</div>`;
+    }
 
     if (!rows.length) {
       html += '<div style="color:var(--dm)">No estimates available</div>';

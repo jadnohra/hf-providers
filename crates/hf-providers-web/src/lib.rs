@@ -228,3 +228,9 @@ pub fn param_hint(name: &str) -> JsValue {
         None => JsValue::NULL,
     }
 }
+
+/// Detect if a model name suggests a Mixture-of-Experts architecture.
+#[wasm_bindgen]
+pub fn is_moe(name: &str) -> bool {
+    Model::detect_moe(name)
+}

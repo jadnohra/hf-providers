@@ -109,6 +109,85 @@ impl Model {
         })
     }
 
+    /// Detect if a model is likely a Mixture-of-Experts architecture.
+    /// Checks name patterns (8x7B, 17B-16E, "MoE") and known MoE families.
+    /// Excludes distilled models (dense derivatives of MoE architectures).
+    pub fn detect_moe(name: &str) -> bool {
+        let lower = name.to_lowercase();
+        // Distilled models are dense, not MoE
+        if lower.contains("distill") {
+            return false;
+        }
+        // Pattern: NxMB (Mixtral style, e.g. "8x7B", "8x22B")
+        if lower.bytes().any(|b| b == b'x') {
+            let mut i = 0;
+            let bytes = lower.as_bytes();
+            while i < bytes.len() {
+                if bytes[i] == b'x' && i > 0 && bytes[i - 1].is_ascii_digit() {
+                    // Check if followed by digits+B
+                    let rest = &lower[i + 1..];
+                    if rest.starts_with(|c: char| c.is_ascii_digit())
+                        && rest.contains('b')
+                    {
+                        return true;
+                    }
+                }
+                i += 1;
+            }
+        }
+        // Pattern: NB-NE or NB_NE (Llama-4 style, e.g. "17B-16E", "17B-128E")
+        if lower.contains('e') {
+            let bytes = lower.as_bytes();
+            for i in 0..bytes.len() {
+                if (bytes[i] == b'-' || bytes[i] == b'_') && i > 0 && bytes[i - 1] == b'b' {
+                    let rest = &lower[i + 1..];
+                    let digit_end = rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len());
+                    if digit_end > 0 && rest[digit_end..].starts_with('e') {
+                        let after_e = digit_end + 1;
+                        if after_e >= rest.len()
+                            || !rest.as_bytes()[after_e].is_ascii_alphanumeric()
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        // Literal "moe" in name
+        if lower.contains("moe") {
+            return true;
+        }
+        // Known MoE model families
+        const MOE_FAMILIES: &[&str] = &[
+            "mixtral", "dbrx", "grok-1", "jamba",
+            "deepseek-v2", "deepseek-v3",
+        ];
+        for fam in MOE_FAMILIES {
+            if lower.contains(fam) {
+                return true;
+            }
+        }
+        // DeepSeek-R1 special handling: the base R1 (671B) is MoE, but
+        // derivatives like R1-0528-Qwen3-8B are dense. Match only when
+        // "deepseek-r1" is followed by end-of-string, a slash, or an
+        // optional date suffix (e.g. "-0528") and nothing else model-name-like.
+        if lower.contains("deepseek-r1") {
+            // Strip everything up to and including "deepseek-r1"
+            let after = lower.split("deepseek-r1").last().unwrap_or("");
+            // Strip optional date suffix like "-0528"
+            let after = after.trim_start_matches(|c: char| c == '-' || c.is_ascii_digit());
+            // If nothing meaningful remains, it's the base MoE model
+            if after.is_empty() || after.starts_with('/') {
+                return true;
+            }
+        }
+        // "arctic" but not embedding models
+        if lower.contains("arctic") && !lower.contains("arctic-embed") {
+            return true;
+        }
+        false
+    }
+
     /// Extract a likely param size from model name, e.g. "70B", "1.5B".
     /// Uses boundary matching to avoid "7B" matching inside "17B".
     pub fn param_hint(name: &str) -> Option<String> {
@@ -162,5 +241,65 @@ mod tests {
     fn param_hint_none_for_no_match() {
         assert_eq!(Model::param_hint("gpt2"), None);
         assert_eq!(Model::param_hint("clip-vit"), None);
+    }
+
+    #[test]
+    fn detect_moe_name_patterns() {
+        // NxMB pattern (Mixtral style)
+        assert!(Model::detect_moe("Mixtral-8x7B-Instruct-v0.1"));
+        assert!(Model::detect_moe("Mixtral-8x22B-Instruct-v0.1"));
+        // NB-NE pattern (Llama-4 style)
+        assert!(Model::detect_moe("Llama-4-Scout-17B-16E-Instruct"));
+        assert!(Model::detect_moe("Llama-4-Maverick-17B-128E-Instruct"));
+        // Literal "MoE"
+        assert!(Model::detect_moe("Qwen2-MoE-57B"));
+        // Known families
+        assert!(Model::detect_moe("deepseek-ai/DeepSeek-V3"));
+        assert!(Model::detect_moe("deepseek-ai/DeepSeek-R1"));
+        assert!(Model::detect_moe("databricks/dbrx-instruct"));
+        assert!(Model::detect_moe("Snowflake/snowflake-arctic-instruct"));
+        assert!(Model::detect_moe("ai21labs/Jamba-v0.1"));
+    }
+
+    #[test]
+    fn detect_moe_false_for_dense() {
+        assert!(!Model::detect_moe("Llama-3.1-70B-Instruct"));
+        assert!(!Model::detect_moe("Qwen2.5-72B"));
+        assert!(!Model::detect_moe("gemma-3-27b-it"));
+        assert!(!Model::detect_moe("gpt2"));
+        assert!(!Model::detect_moe("Phi-4-mini-instruct"));
+    }
+
+    #[test]
+    fn detect_moe_false_for_distilled() {
+        // Distilled models are dense, not MoE
+        assert!(!Model::detect_moe("deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"));
+        assert!(!Model::detect_moe("deepseek-ai/DeepSeek-R1-Distill-Llama-8B"));
+        assert!(!Model::detect_moe("deepseek-ai/DeepSeek-R1-Distill-Llama-70B"));
+        assert!(!Model::detect_moe("cyberagent/DeepSeek-R1-Distill-Qwen-32B-Japanese"));
+        assert!(!Model::detect_moe("unsloth/DeepSeek-R1-Distill-Llama-8B"));
+    }
+
+    #[test]
+    fn detect_moe_false_for_r1_derivatives() {
+        // R1 derivatives with a base model name are dense
+        assert!(!Model::detect_moe("deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"));
+    }
+
+    #[test]
+    fn detect_moe_true_for_r1_base() {
+        // The base R1 models are MoE
+        assert!(Model::detect_moe("deepseek-ai/DeepSeek-R1"));
+        assert!(Model::detect_moe("deepseek-ai/DeepSeek-R1-0528"));
+    }
+
+    #[test]
+    fn detect_moe_false_for_arctic_embed() {
+        // Arctic embedding models are not MoE
+        assert!(!Model::detect_moe("Snowflake/snowflake-arctic-embed-l-v2.0"));
+        assert!(!Model::detect_moe("Snowflake/snowflake-arctic-embed-m"));
+        assert!(!Model::detect_moe("Snowflake/snowflake-arctic-embed-l"));
+        // But arctic instruct is MoE
+        assert!(Model::detect_moe("Snowflake/snowflake-arctic-instruct"));
     }
 }

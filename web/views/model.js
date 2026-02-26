@@ -70,6 +70,7 @@ export function render(container, match, opts = {}) {
 
 function renderModel(container, model, opts = {}) {
   let params = model.safetensorsParams;
+  let paramsEstimated = false; // true when params came from name hint, not safetensors
   // Fallback chain: cached exact match → related model in cache → paramHint from name
   if (!params && state.models) {
     const cached = state.models.find(m => m.id === model.id);
@@ -94,9 +95,14 @@ function renderModel(container, model, opts = {}) {
         const n = parseFloat(hm[1]);
         if (hint.includes('B') || hint.includes('b')) params = n * 1e9;
         else if (hint.includes('M') || hint.includes('m')) params = n * 1e6;
+        paramsEstimated = true;
       }
     }
   }
+  // Detect MoE: check cached flag or use wasm detection
+  const cachedModel = state.models && state.models.find(m => m.id === model.id);
+  const isMoe = cachedModel?.is_moe || wasm.isMoe(model.id.split('/').pop());
+  const moeWarning = isMoe && paramsEstimated;
   let html = '';
 
   const parts = model.id.split('/');
@@ -119,6 +125,9 @@ function renderModel(container, model, opts = {}) {
     }
     specGrid += `<div class="spec-item"><div class="spec-val">${fmtNum(model.likes)}</div><div class="spec-label">Likes</div></div>`;
     specGrid += `<div class="spec-item"><div class="spec-val">${fmtNum(model.downloads)}</div><div class="spec-label">Downloads</div></div>`;
+    if (moeWarning) {
+      specGrid += `<div class="spec-item" style="grid-column:1/-1"><div class="moe-warn">MoE model -- weight estimates use active params only, actual weights are larger</div></div>`;
+    }
 
     const tags = [model.libraryName, model.pipelineTag].filter(Boolean).join(' \u00b7 ');
 
@@ -150,7 +159,7 @@ function renderModel(container, model, opts = {}) {
 
   // Hardware estimation cards
   if (params) {
-    html += renderHardwareCards(model, params);
+    html += renderHardwareCards(model, params, moeWarning);
   } else {
     html += `<div class="sec">
       <div class="sec-head"><span class="sec-q">What can my hardware run?</span><div class="sec-line"></div></div>
@@ -285,7 +294,7 @@ function renderSnippet(modelId, providerName) {
   </div>`;
 }
 
-function renderHardwareCards(model, params) {
+function renderHardwareCards(model, params, moeWarning) {
   const gpuKeys = ['rtx_4090', 'rtx_5090', 'm4_pro_48', 'm4_max_128', 'a100_pcie_80_gb'];
   if (state.myGpu && state.myGpu.key && !gpuKeys.includes(state.myGpu.key)) {
     gpuKeys.unshift(state.myGpu.key);
@@ -350,9 +359,10 @@ function renderHardwareCards(model, params) {
     }
   }
 
+  const moeNote = moeWarning ? `<div class="moe-warn" style="margin-top:6px">MoE model -- hardware estimates may be inaccurate (using active params only)</div>` : '';
   return `<div class="sec" id="sec-hw">
     <div class="sec-head"><span class="sec-q">What can my hardware run?</span><div class="sec-line"></div><a class="sec-more" href="/hw/rtx_4090">Pick your hardware</a></div>
-    <div class="hw-row">${cards}</div>
+    <div class="hw-row">${cards}</div>${moeNote}
   </div>`;
 }
 
