@@ -43,3 +43,7 @@ export function fmtParams(n) {
 export function paramHint(name) {
   return wasm.param_hint(name);
 }
+
+export function isMoe(name) {
+  return wasm.is_moe(name);
+}
