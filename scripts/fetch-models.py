@@ -103,6 +103,41 @@ def try_fetch_json(url):
         return None
 
 
+# -- Param extraction from model name ----------------------------------------
+
+_PARAM_SIZES = [
+    "671B", "405B", "400B", "236B", "180B", "135B", "120B", "109B",
+    "104B", "80B", "72B", "70B", "65B", "57B", "46B", "41B", "40B",
+    "35B", "34B", "32B", "30B", "27B", "22B", "20B", "17B", "16B",
+    "15B", "14B", "13B", "12B", "11B", "9B", "8B", "7B", "6B",
+    "4B", "3B", "2B", "1.5B", "1.3B", "1.1B",
+    "1B", "0.5B", "0.3B",
+]
+
+def params_from_name(model_id):
+    """Extract param count from model name (e.g. 'Llama-3.2-1B' -> 1e9)."""
+    name = model_id.upper()
+    for size in _PARAM_SIZES:
+        s = size.upper()
+        pos = name.find(s)
+        if pos < 0:
+            continue
+        # Word boundary: char before must not be a digit
+        if pos > 0 and name[pos - 1].isdigit():
+            continue
+        # Char after must not be alphanumeric
+        end = pos + len(s)
+        if end < len(name) and name[end].isalnum():
+            continue
+        # Parse "70B" -> 70e9, "1.5B" -> 1.5e9
+        num_str = size[:-1]  # strip 'B'
+        try:
+            return int(float(num_str) * 1e9)
+        except ValueError:
+            continue
+    return None
+
+
 # -- Safetensors index parsing ----------------------------------------------
 
 def params_from_safetensors_index(model_id):
@@ -129,27 +164,27 @@ def params_from_config(model_id):
         return None
     # For multimodal models, text config is nested
     tc = cfg.get("text_config", cfg)
-    experts = (
-        tc.get("num_local_experts")
-        or tc.get("num_experts")
-        or tc.get("n_routed_experts")
-    )
-    if not experts:
-        return None
     hidden = tc.get("hidden_size")
     intermediate = tc.get("intermediate_size")
     layers = tc.get("num_hidden_layers")
     vocab = tc.get("vocab_size")
     if not all([hidden, intermediate, layers, vocab]):
         return None
-    # Rough param estimate: embedding + layers * (attention + experts * FFN)
+    experts = (
+        tc.get("num_local_experts")
+        or tc.get("num_experts")
+        or tc.get("n_routed_experts")
+    )
+    # Rough param estimate: embedding + layers * (attention + FFN)
     # Attention per layer: 4 * hidden^2 (Q, K, V, O projections)
     # FFN per expert: 3 * hidden * intermediate (gate, up, down)
-    # This is approximate but much better than using active params only
     embed_params = vocab * hidden * 2  # input + output embeddings
     attn_per_layer = 4 * hidden * hidden
-    ffn_per_expert = 3 * hidden * intermediate
-    total = embed_params + layers * (attn_per_layer + experts * ffn_per_expert)
+    if experts:
+        ffn_per_layer = experts * 3 * hidden * intermediate
+    else:
+        ffn_per_layer = 3 * hidden * intermediate
+    total = embed_params + layers * (attn_per_layer + ffn_per_layer)
     return total
 
 
@@ -317,6 +352,58 @@ def main():
         except Exception as e:
             print(f" ERROR: {e}")
         time.sleep(0.2)
+
+    # -- Popular local-only models -----------------------------------------
+    # Fetch top text-generation models by likes that aren't already in the
+    # provider list. Paginate until we have 200 new models with param counts.
+    LOCAL_TARGET = 200
+    local_new = 0
+    local_enriched = 0
+    offset = 0
+    page_size = 200
+    print(f"  popular (local-only)...", end="", flush=True)
+    while local_new < LOCAL_TARGET:
+        url = (
+            f"{HF_API}/models?pipeline_tag=text-generation"
+            f"&sort=likes&direction=-1&limit={page_size}&offset={offset}{EXPAND}"
+        )
+        try:
+            results = fetch_json(url)
+        except Exception as e:
+            print(f" ERROR: {e}")
+            break
+        if not results:
+            break
+        for raw in results:
+            mid = raw.get("id")
+            if not mid or mid in models:
+                continue
+            # Try API safetensors.total, then index, then config.json, then name
+            st = raw.get("safetensors")
+            has_params = isinstance(st, dict) and st.get("total")
+            if not has_params:
+                total = params_from_safetensors_index(mid)
+                if not total:
+                    total = params_from_config(mid)
+                if not total:
+                    total = params_from_name(mid)
+                if total:
+                    raw.setdefault("safetensors", {})["total"] = total
+                    has_params = True
+                    local_enriched += 1
+            if not has_params:
+                continue
+            stripped = strip_model(raw)
+            if stripped:
+                models[mid] = stripped
+                local_new += 1
+                if local_new >= LOCAL_TARGET:
+                    break
+        offset += page_size
+        time.sleep(0.3)
+        if offset >= 10000:
+            break
+    print(f" {local_new} new, {local_enriched} enriched from index (total: {len(models)})")
 
     # -- MoE enrichment pass ------------------------------------------------
     moe_cache = load_moe_cache(root)
