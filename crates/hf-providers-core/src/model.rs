@@ -110,16 +110,57 @@ impl Model {
     }
 
     /// Extract a likely param size from model name, e.g. "70B", "1.5B".
+    /// Uses boundary matching to avoid "7B" matching inside "17B".
     pub fn param_hint(name: &str) -> Option<String> {
         const SIZES: &[&str] = &[
             "671B", "405B", "236B", "135B", "120B", "109B", "80B", "72B",
-            "70B", "32B", "30B", "27B", "22B", "20B", "14B", "13B", "12B",
-            "9B", "8B", "7B", "4B", "3B", "2B", "1.5B", "1.3B", "1B", "0.3B",
+            "70B", "32B", "30B", "27B", "22B", "20B", "17B", "14B", "13B",
+            "12B", "9B", "8B", "7B", "4B", "3B", "2B", "1.5B", "1.3B",
+            "1B", "0.3B",
         ];
         let upper = name.to_uppercase();
-        SIZES
-            .iter()
-            .find(|s| upper.contains(&s.to_uppercase()))
-            .map(|s| (*s).to_string())
+        SIZES.iter().find(|s| {
+            let s_upper = s.to_uppercase();
+            if let Some(pos) = upper.find(&s_upper) {
+                // Check that the char before the match is not a digit (word boundary)
+                let before_ok = pos == 0
+                    || !upper.as_bytes()[pos - 1].is_ascii_digit();
+                // Check that the char after is not alphanumeric (already ends with B)
+                let end = pos + s_upper.len();
+                let after_ok = end >= upper.len()
+                    || !upper.as_bytes()[end].is_ascii_alphanumeric();
+                before_ok && after_ok
+            } else {
+                false
+            }
+        }).map(|s| (*s).to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn param_hint_basic() {
+        assert_eq!(Model::param_hint("Llama-3.1-70B-Instruct"), Some("70B".into()));
+        assert_eq!(Model::param_hint("Qwen2.5-1.5B"), Some("1.5B".into()));
+        assert_eq!(Model::param_hint("some-model-8B"), Some("8B".into()));
+    }
+
+    #[test]
+    fn param_hint_no_false_substring() {
+        // "17B" should not match "7B"
+        assert_eq!(Model::param_hint("Llama-4-Scout-17B-16E-Instruct"), Some("17B".into()));
+        // "13B" should not match "1.3B" or "3B"
+        assert_eq!(Model::param_hint("model-13B-chat"), Some("13B".into()));
+        // "120B" should not match "12B" or "20B"
+        assert_eq!(Model::param_hint("big-model-120B"), Some("120B".into()));
+    }
+
+    #[test]
+    fn param_hint_none_for_no_match() {
+        assert_eq!(Model::param_hint("gpt2"), None);
+        assert_eq!(Model::param_hint("clip-vit"), None);
     }
 }
