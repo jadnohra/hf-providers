@@ -13,7 +13,7 @@ default-members = [
 [workspace.package]
 version = "0.3.0"
 edition = "2021"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 description = "Find inference providers for Hugging Face models, compare them, get code snippets"
 repository = "https://github.com/jadnohra/hf-providers"
 homepage = "https://github.com/jadnohra/hf-providers"
